@@ -1,52 +1,23 @@
 # Prerequisites
-*.d
+dep/*
+!dep/.keep_dir
 
 # Object files
-*.o
-*.ko
-*.obj
-*.elf
+obj/*
+!obj/.keep_dir
 
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
 
 # Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+xfs_undelete
+xfs_undelete_d
 
 # Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+core
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# Temporary and backup files
+*~
+*.bak
+*.old
+*.ori
+*.orig
+*.layout
