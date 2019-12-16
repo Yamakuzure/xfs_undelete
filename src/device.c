@@ -7,6 +7,7 @@
 #include "device.h"
 #include "log.h"
 #include "utils.h"
+#include "xfs_sb.h"
 
 
 #include <errno.h>
@@ -22,11 +23,11 @@
 
 
 // General global variables
-static char** block_buf        = NULL;
-static char*  device           = NULL;
-static char*  mntDir           = NULL;
-static char*  mntOpts          = NULL;
-static bool   was_remounted_ro = false;
+static uint8_t** block_buf        = NULL;
+static char*     device           = NULL;
+static char*     mntDir           = NULL;
+static char*     mntOpts          = NULL;
+static bool      was_remounted_ro = false;
 
 // XFS core information we need right here.
 static char     sb_magic[5]     = { 0x0 }; /// Bytes  0- 3 : Magic Number, must be "XFSB"
@@ -36,13 +37,12 @@ static char     sb_uuid_str[37] = { 0x0 }; /// String representation of the UUID
 static uint32_t sb_ag_size      = 0;       /// Bytes 84-87 : AG size (in blocks)
 static uint32_t sb_ag_count     = 0;       /// Bytes 88-91 : Number of AGs (normally 0x04)
 
+// Global XFS core information we also need elsewhere
+size_t  full_ag_size   = 0;    /// sb_ag_size * sb_block_size
+size_t  full_disk_size = 0;    /// sb_ag_count * sb_ag_size * sb_block_size
+xfs_sb* superblocks    = NULL; /// All AGs are loaded in here
 
-/** @brief restore the devices mount status and free the internal path
-  *
-  * If the device was remounted read-only, try to restore the rw state.
-  * After that the internal pointer is freed.
-  * If the remounting fails, a message is printed to stdout.
-**/
+
 void free_device( void ) {
 	if ( device ) {
 		if ( was_remounted_ro ) {
@@ -60,6 +60,8 @@ void free_device( void ) {
 		free( mntDir );
 	if ( mntOpts )
 		free( mntOpts );
+	if ( superblocks )
+		free( superblocks );
 }
 
 
@@ -92,6 +94,13 @@ static int get_ag_base_info() {
 
 	// Now that we are here, get the data!
 	memcpy(  sb_magic, buf,       4 );
+	if ( strncmp( sb_magic, XFS_SB_MAGIC, 4 ) ) {
+		log_critical( "Wrong magic: 0x%02x%02x%02x%02x instead of 0x%02x%02x%02x%02x",
+		              sb_magic[0],     sb_magic[1],     sb_magic[2],     sb_magic[3],
+		              XFS_SB_MAGIC[0], XFS_SB_MAGIC[1], XFS_SB_MAGIC[2], XFS_SB_MAGIC[3] );
+		return -1;
+	}
+
 	memcpy(  sb_uuid,  buf + 32, 16 );
 	sb_block_size = flip32( *( ( uint32_t* )( buf +  4 ) ) );
 	sb_ag_size    = flip32( *( ( uint32_t* )( buf + 84 ) ) );
@@ -103,16 +112,19 @@ static int get_ag_base_info() {
 	          sb_uuid[ 8], sb_uuid[ 7],
 	          sb_uuid[10], sb_uuid[11], sb_uuid[12], sb_uuid[13], sb_uuid[14], sb_uuid[15] );
 
+	full_ag_size   = ( size_t )sb_ag_size * ( size_t )sb_block_size;
+	full_disk_size = ( size_t )sb_ag_count * full_ag_size;
+
+	log_debug( "Magic     : %s", sb_magic );
+	log_debug( "UUID      : %s", sb_uuid_str );
+	log_debug( "AG Count  : %u", sb_ag_count );
+	log_debug( "AG Size   : %u (%s)", sb_ag_size, get_human_size( full_ag_size ) );
+	log_debug( "Block Size: %u", sb_block_size );
+	log_debug( "Disk Size : %s", get_human_size( full_disk_size ) );
+
 	return 0;
 }
 
-/** @brief scan the superblocks
-  *
-  * This will scan the superblocks and fill internal data structures.
-  * Do not forget to call free_device() when you are finished.
-  *
-  * @return 0 on success, -1 on failure.
-**/
 int scan_superblocks() {
 	if ( NULL == device ) {
 		log_critical( "BUG! %s called before calling set_device()!", __func__ );
@@ -123,20 +135,36 @@ int scan_superblocks() {
 	if ( -1 == get_ag_base_info() )
 		return -1;
 
+	// Second we allocate our superblock structures
+	superblocks = calloc( sb_ag_count, sizeof( struct _xfs_sb ) );
+	if ( NULL == superblocks ) {
+		log_critical( "Unable to allocate %zu bytes for superblock structures: %m [%d]",
+		              sb_ag_count * sizeof( struct _xfs_sb ), errno );
+		return -1;
+	}
+
+	// Now we need the device to be opened.
+	int fd  = open( device, O_RDONLY | O_NOFOLLOW );
+	if ( -1 == fd ) {
+		log_error( "Can not open %s for reading: %m [%d]", device, errno );
+		return -1;
+	}
+
+	// Now that we have the structures and the file descriptor, let's fill the structs:
+	for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
+		if ( -1 == xfs_read_sb( &superblocks[i], fd, i, sb_ag_size, sb_block_size ) ) {
+			log_critical( "Reading AG %lu/%lu FAILED!", i + 1, sb_ag_count );
+			close( fd );
+			return -1;
+		}
+	}
+
+	close( fd );
+
 	return 0;
 }
 
 
-/** @brief Set the device name and remount ro
-  *
-  * If the device exists and if it is mounted, it will be remounted
-  * read-only.
-  * When working with the device is finished, call `free_device()`
-  * to clean up and remount rw.
-  *
-  * @param[in] device_path  Full path to the device to work with
-  * @return 0 on success, -1 on failure.
-**/
 int set_device( char const* device_path ) {
 
 	if ( device )

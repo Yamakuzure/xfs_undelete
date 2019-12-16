@@ -72,6 +72,12 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/utils.h" />
-		<Extensions />
+		<Unit filename="src/xfs_sb.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/xfs_sb.h" />
+		<Extensions>
+			<editor_config active="1" use_tabs="1" tab_indents="1" tab_width="8" indent="8" eol_mode="2" />
+		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

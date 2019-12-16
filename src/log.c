@@ -69,18 +69,18 @@ static void log_direct_out( char const* time, log_level_t level, char const* loc
 	int r;
 
 	// Now generate the intro
-	r = resize_buf( &buffer, &buffer_size, intro_size + 1);
+	r = resize_buf( &buffer, &buffer_size, intro_size + 1 );
 	if ( r ) {
-		fprintf( stderr, "CRITICAL: Failed to allocate %zu bytes for log buffer!", intro_size + 1);
+		fprintf( stderr, "CRITICAL: Failed to allocate %zu bytes for log buffer!", intro_size + 1 );
 		return;
 	}
 	// Note: If set in debug mode, location comes with its own pipe.
 	snprintf( buffer, intro_size, "%s|%s|%s", time, level_str[level], location );
 
 	// Copy the intro
-	r = resize_buf( &message, &message_size, buffer_size + 1);
+	r = resize_buf( &message, &message_size, buffer_size + 1 );
 	if ( r ) {
-		fprintf( stderr, "CRITICAL: Failed to allocate %zu bytes for log message!", buffer_size + 1);
+		fprintf( stderr, "CRITICAL: Failed to allocate %zu bytes for log message!", buffer_size + 1 );
 		return;
 	}
 	strncpy( message, buffer, buffer_size );
@@ -120,7 +120,7 @@ static void log_direct_out( char const* time, log_level_t level, char const* loc
 	// Now the message can be completed
 	size_t full_size = strlen( message ) + text_len;
 	if ( full_size >= message_size ) {
-		r = resize_buf( &message, &message_size, full_size + 1);
+		r = resize_buf( &message, &message_size, full_size + 1 );
 		if ( r ) {
 			fprintf( stderr, "CRITICAL: Failed to allocate %zu bytes for log message!", full_size + 1 );
 			return;

@@ -16,11 +16,6 @@
 #include <unistd.h>
 
 
-/** @brief check whether a file or directory exists.
-  * @param[in] path  The path to check
-  * @param[in] type Either 'd' for [d]irectory, or 'f' for [f]ile
-  * @return 1 if it exists, 0 otherwise.
-**/
 int exists( char* path, int type ) {
 	if ( NULL == path ) {
 		log_critical( "%s", "BUG: Called without a path!" );
@@ -44,18 +39,25 @@ int exists( char* path, int type ) {
 } /* exists */
 
 
-/** @brief compile a location information string
-  *
-  * The output format is:
-  *   basename(path):line:func
-  * in DEBUG mode. Otherwise an empty string is returned.
-  *
-  * @param[in] path  Path to the file
-  * @param[in] line  Line number in @a path
-  * @param[in] func  Representation of the function
-  *
-  * @return Pointer to a static buffer. This must *NOT* be freed!
-**/
+char const* get_human_size( size_t full_size ) {
+	int         reduct        = 0;
+	static char result[8]     = { 0x0 };
+	static char suffix[12][4] = {
+		"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB", "XiB", "SiB", "DiB"
+	};
+	size_t      value         = full_size;
+
+	while ( value > 1023 ) {
+		value /= 1024;
+		++reduct;
+	}
+
+	snprintf( result, 8, "%4zu%3s", value, reduct < 12 ? suffix[reduct] : "N/A" );
+
+	return result;
+}
+
+
 char const* location_info( char const* path, size_t line, char const* func ) {
 	static char base_buffer  [PATH_MAX] = { 0 };
 #if defined(PWX_DEBUG)
@@ -68,10 +70,6 @@ char const* location_info( char const* path, size_t line, char const* func ) {
 }
 
 
-/** @brief Create a full path like 'mkdir -p'
-  * @param[in] path  The path to create
-  * @return 0 on success, -1 on failure.
-**/
 int mkdirs ( char const* path ) {
 	if ( NULL == path ) {
 		log_critical( "%s", "BUG: Called without a path!" );
@@ -119,7 +117,7 @@ int mkdirs ( char const* path ) {
 	} else
 		strncpy ( full_path, buffer, PATH_MAX + 1 );
 
-	/* === Now create the path strcture step by step === */
+	/* === Now create the path structure step by step === */
 	size_t full_len = strlen( full_path );
 	size_t offset   = full_path[0] == '/' ? 1 : 0;
 	char*  next;
