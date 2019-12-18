@@ -26,6 +26,15 @@ thread_local static char*  message      = NULL;
 thread_local static size_t message_size = 0;
 
 
+// Progress lines are fixed (sorry) and need some info
+#define     progress_len  81
+static char progress_line[progress_len] = { 0x0 };
+#define     progress_blnk "                                                                                "
+//                         12345678901234567890123456789012345678901234567890123456789012345678901234567890
+//                                  1         2         3         4         5         6         7         8
+static bool have_progress     = false;
+
+
 /// @brief Simple log_level_t to char const*
 static char const level_str[6][9] = {
 	/* log_DEBUG    */ "*debug**",
@@ -130,8 +139,39 @@ static void log_direct_out( char const* time, log_level_t level, char const* loc
 
 	mtx_lock( &output_lock );
 	FILE* target = level > LOG_WARNING ? stderr : stdout;
+	if (have_progress) {
+		fprintf( target, "\r%s\r", progress_blnk);
+		have_progress = false;
+	}
 	fprintf ( target, "%s\n", message );
 	fflush( target );
+	mtx_unlock( &output_lock );
+}
+
+
+void show_progress( char const* fmt, ...) {
+
+	// We use a fixed buffer here, but warn if it is too small, as that is considered to be a bug
+	size_t  text_len = progress_len;
+	va_list ap;
+	va_start ( ap, fmt );
+	text_len = vsnprintf( progress_line, text_len, fmt, ap );
+	va_end( ap );
+
+	// Warn if we are too big
+	if ( text_len >= progress_len )
+		log_warning("Progress line needs &zu characters, but %d are the limit!",
+			text_len, progress_len - 1);
+
+	// Lock, we do not want to be disturbed, now.
+	mtx_lock( &output_lock );
+
+	if (have_progress)
+		fprintf( stdout, "\r%s\r", progress_blnk);
+	fprintf ( stdout, "%s", progress_line );
+	have_progress = true;
+	fflush( stdout );
+
 	mtx_unlock( &output_lock );
 }
 

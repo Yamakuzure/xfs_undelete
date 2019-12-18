@@ -39,6 +39,17 @@ typedef enum {
 void pwx_log( char const* location, log_level_t level, char const* message, ... );
 
 
+/** @brief show a progress line
+  *
+  * These lines are not ended with a line break, and each call to this
+  * function erases the previous line and flushes stdout.
+  *
+  * @param[in] fmt  The format string
+  * @param[in] ...  Format arguments
+**/
+void show_progress( char const* fmt, ...);
+
+
 /* --- Logging helper macros --- */
 #define PWX_log_internal(_l_, _m_, ...)                       \
 	pwx_log( location_info(__FILE__, __LINE__, __func__), \
