@@ -10,9 +10,11 @@
 #include "xfs_sb.h"
 
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <mntent.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +25,6 @@
 
 
 // General global variables
-static uint8_t** block_buf        = NULL;
 static char*     device           = NULL;
 static char*     mntDir           = NULL;
 static char*     mntOpts          = NULL;
@@ -35,12 +36,16 @@ static uint32_t sb_block_size   = 0;       /// Bytes  4- 7 : Block Size (in byte
 static uint8_t  sb_uuid[16]     = { 0x0 }; /// Bytes 32-47 : UUID
 static char     sb_uuid_str[37] = { 0x0 }; /// String representation of the UUID
 static uint32_t sb_ag_size      = 0;       /// Bytes 84-87 : AG size (in blocks)
-static uint32_t sb_ag_count     = 0;       /// Bytes 88-91 : Number of AGs (normally 0x04)
 
 // Global XFS core information we also need elsewhere
-size_t  full_ag_size   = 0;    /// sb_ag_size * sb_block_size
-size_t  full_disk_size = 0;    /// sb_ag_count * sb_ag_size * sb_block_size
-xfs_sb* superblocks    = NULL; /// All AGs are loaded in here
+size_t   full_ag_size     = 0;    /// sb_ag_size * sb_block_size
+size_t   full_disk_blocks = 0;    /// sb_ag_count * sb_ag_size
+size_t   full_disk_size   = 0;    /// full_disk_blocks * sb_block_size
+uint32_t sb_ag_count      = 0;    /// Bytes 88-91 : Number of AGs (normally 0x04)
+xfs_sb*  superblocks      = NULL; /// All AGs are loaded in here
+
+// Global disk information
+bool disk_is_ssd = false;
 
 
 void free_device( void ) {
@@ -112,8 +117,9 @@ static int get_ag_base_info() {
 	          sb_uuid[ 8], sb_uuid[ 7],
 	          sb_uuid[10], sb_uuid[11], sb_uuid[12], sb_uuid[13], sb_uuid[14], sb_uuid[15] );
 
-	full_ag_size   = ( size_t )sb_ag_size * ( size_t )sb_block_size;
-	full_disk_size = ( size_t )sb_ag_count * full_ag_size;
+	full_ag_size     = ( size_t )sb_ag_size    * ( size_t )sb_block_size;
+	full_disk_blocks = ( size_t )sb_ag_count   * ( size_t )sb_ag_size;
+	full_disk_size   = ( size_t )sb_block_size * full_disk_blocks;
 
 	log_debug( "Magic     : %s", sb_magic );
 	log_debug( "UUID      : %s", sb_uuid_str );
@@ -212,6 +218,41 @@ int set_device( char const* device_path ) {
 		} else
 			log_info( "%s mounted ro at %s", device, mntDir );
 	}
+
+	/* === Check whether the device is an SSD. We do not    ===
+	 * === want to got multi-threaded on a rotational disk! ===
+	 * ========================================================
+	 */
+	char  disk_part[6] = { 0x0 };
+	char* cur_p        = strrchr(device, '/');
+
+	if (cur_p) {
+		++cur_p;
+		for ( int i = 0; *cur_p && !isdigit(*cur_p) && (i < 5); ++i, ++cur_p ) {
+			disk_part[i] = *cur_p;
+		}
+	}
+
+	if (strlen(disk_part)) {
+		char rot_file[40] = { 0x0 };
+		int  written      = snprintf(rot_file, 40, "/sys/block/%s/queue/rotational", disk_part);
+		if (written < 40) {
+			FILE* rot = fopen(rot_file, "r");
+			char  res = 0x0;
+			if (rot) {
+				if ( (1 == fread(&res, 1, 1, rot)) && (res == '0') )
+					disk_is_ssd = true;
+				fclose(rot);
+			} else
+				log_error("Unable to open %s: %m [%d]", rot_file, errno);
+		} else
+			log_error("Bug (?) device disk part \"%s\" too large?", disk_part);
+	}
+
+	if (disk_is_ssd)
+		log_info("/dev/%s seems to be an SSD -> Going multi-threaded!", disk_part);
+	else
+		log_info("/dev/%s assumed to be a rotating disk -> Going single-threaded", disk_part);
 
 	return 0;
 }
