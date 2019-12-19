@@ -9,7 +9,13 @@
 #include "scanner.h"
 
 
-int init_scan_data(scan_data_t* scan_data, xfs_sb* sb_data, uint32_t ag_num) {
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+
+int init_scan_data(scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str, xfs_sb* sb_data, uint32_t ag_num) {
 	if ( NULL == scan_data ) {
 		log_critical("%s", "Bug! Called with NULL scan_data!");
 		return -1;
@@ -24,11 +30,14 @@ int init_scan_data(scan_data_t* scan_data, xfs_sb* sb_data, uint32_t ag_num) {
 	}
 
 	scan_data->ag_num      = ag_num;
+	scan_data->device      = dev_str;
 	scan_data->do_start    = false;
 	scan_data->do_stop     = false;
 	scan_data->is_finished = false;
 	scan_data->sb_data     = sb_data;
 	scan_data->sec_scanned = 0;
+	scan_data->thread_num  = thrd_num;
+	scan_data->undeleted   = 0;
 
 	return 0;
 }
@@ -40,7 +49,12 @@ int scanner( void* scan_data ) {
 		return -1;
 	}
 
+
+	uint8_t*     buf  = NULL;
 	scan_data_t* data = (scan_data_t*)scan_data;
+	int          fd   = -1;
+	int          res  = -1;
+
 
 	// Sleep until signaled to start
 	mtx_lock(&data->sleep_lock);
@@ -51,17 +65,29 @@ int scanner( void* scan_data ) {
 	mtx_unlock(&data->sleep_lock);
 
 	// Don't really start if we are told to stop
-	if (data->do_stop) {
-		data->is_finished = true;
-		return 0;
+	if (data->do_stop)
+		goto cleanup;
+
+	// Let's open the device.
+	fd  = open( data->device, O_RDONLY | O_NOFOLLOW );
+	if ( -1 == fd ) {
+		log_error( "[Thread %lu] Can not open %s for reading: %m [%d]",
+			data->thread_num, data->device, errno );
+		goto cleanup;
 	}
 
+	// We are here? All is well, then
+	res = 0;
 
+cleanup:
+	if ( fd > -1)
+		close( fd );
+	if (buf)
+		free(buf);
 
-	// Finished and ready
 	data->is_finished = true;
 
-	return 0;
+	return res;
 }
 
 

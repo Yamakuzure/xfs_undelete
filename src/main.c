@@ -87,7 +87,7 @@ int main( int argc, char const* argv[] ) {
 		goto cleanup;
 	}
 	for (uint32_t i = 0; i < sb_ag_count; ++i) {
-		if (init_scan_data(&scan_data[i], &superblocks[i], i))
+		if (init_scan_data(&scan_data[i], i, device_path, &superblocks[i], i))
 			goto cleanup; // Note: Already logged
 	}
 
@@ -107,7 +107,7 @@ int main( int argc, char const* argv[] ) {
 		// --------------------------
 		for ( int i = next_thread_num; (i - threads_ran) < max_threads; ++i) {
 			log_debug("Creating thread %lu/%lu (%lu/%lu)",
-				i, sb_ag_count, (i - threads_ran), max_threads);
+				i + 1, sb_ag_count, (i - threads_ran + 1), max_threads);
 			thrd_create( &threads[i], scanner, &scan_data[i] );
 		}
 
@@ -115,7 +115,7 @@ int main( int argc, char const* argv[] ) {
 		// -------------------------
 		for ( int i = next_thread_num; (i - threads_ran) < max_threads; ++i) {
 			log_debug("Starting thread %lu/%lu (%lu/%lu)",
-				i, sb_ag_count, (i - threads_ran), max_threads);
+				i + 1, sb_ag_count, (i - threads_ran + 1), max_threads);
 			scan_data[i].do_start = true;
 			cnd_signal(&scan_data[i].wakeup_call);
 		}
@@ -126,6 +126,7 @@ int main( int argc, char const* argv[] ) {
 		struct timespec sleep_time = { .tv_nsec = 500000000 };
 
 		while (threads_running) {
+			uint64_t files_undeleted = 0;
 			uint64_t sectors_scanned = 0;
 			threads_running = 0;
 
@@ -133,11 +134,14 @@ int main( int argc, char const* argv[] ) {
 			for ( uint32_t i = 0; i < max_threads; ++i) {
 				if ( !scan_data[i].is_finished )
 					threads_running++;
+				files_undeleted += scan_data[i].undeleted;
 				sectors_scanned += scan_data[i].sec_scanned;
 			}
 
 			// Get the stats out:
-			show_progress("Threads % 2lu/% 2lu running; Scanned % 10llu/% 10llu sectors (%5.2f%%)",
+			show_progress( "Scanned % 10llu/% 10llu sectors (%5.2f%%);"
+			               " %llu files restored;"
+			               " % 2lu/% 2lu threads",
 					threads_running, max_threads, sectors_scanned, full_disk_blocks,
 					(double)sectors_scanned / (double)full_disk_blocks * 100.);
 
@@ -150,7 +154,7 @@ int main( int argc, char const* argv[] ) {
 		for ( int i = next_thread_num; (i - threads_ran) < max_threads; ++i) {
 			int t_res = 0;
 			log_debug("Joining thread %lu/%lu (%lu/%lu)",
-				i, sb_ag_count, (i - threads_ran), max_threads);
+				i + 1, sb_ag_count, (i - threads_ran) + 1, max_threads);
 			thrd_join( threads[i], &t_res );
 			if (t_res) {
 				log_warning("Thread &lu reported a problem! [%d]", i, t_res);
