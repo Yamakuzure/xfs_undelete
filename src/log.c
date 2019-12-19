@@ -27,11 +27,11 @@ thread_local static size_t message_size = 0;
 
 
 // Progress lines are fixed (sorry) and need some info
-#define     progress_len  81
+#define     progress_len  91
 static char progress_line[progress_len] = { 0x0 };
-#define     progress_blnk "                                                                                "
-//                         12345678901234567890123456789012345678901234567890123456789012345678901234567890
-//                                  1         2         3         4         5         6         7         8
+#define     progress_blnk "                                                                                          "
+//                         123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+//                                  1         2         3         4         5         6         7         8         9
 static bool have_progress     = false;
 
 
