@@ -68,7 +68,14 @@ int scanner( void* scan_data ) {
 	if (data->do_stop)
 		goto cleanup;
 
-	// Let's open the device.
+	// First we need a buffer:
+	buf = malloc(sb_block_size);
+	if (NULL == buf) {
+		log_critical("Unable to allocate %lu bytes for block buffer!", sb_block_size);
+		goto cleanup;
+	}
+
+	// Let's open the device, then.
 	fd  = open( data->device, O_RDONLY | O_NOFOLLOW );
 	if ( -1 == fd ) {
 		log_error( "[Thread %lu] Can not open %s for reading: %m [%d]",
