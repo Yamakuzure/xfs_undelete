@@ -139,11 +139,12 @@ int main( int argc, char const* argv[] ) {
 			}
 
 			// Get the stats out:
-			show_progress( "Scanned % 10llu/% 10llu sectors (%5.2f%%);"
+			show_progress( "Scanned % 10llu/% 10llu sectors (%6.2f%%);"
 			               " %llu files restored;"
 			               " % 2lu/% 2lu threads",
-					threads_running, max_threads, sectors_scanned, full_disk_blocks,
-					(double)sectors_scanned / (double)full_disk_blocks * 100.);
+					sectors_scanned, full_disk_blocks,
+					(double)sectors_scanned / (double)full_disk_blocks * 100.,
+					files_undeleted, threads_running, max_threads);
 
 			// Let's sleep for half a second
 			thrd_sleep( &sleep_time, NULL );

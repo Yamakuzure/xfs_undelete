@@ -27,11 +27,12 @@ thread_local static size_t message_size = 0;
 
 
 // Progress lines are fixed (sorry) and need some info
-#define     progress_len  91
+#define     progress_len  81
 static char progress_line[progress_len] = { 0x0 };
-#define     progress_blnk "                                                                                          "
-//                         123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
-//                                  1         2         3         4         5         6         7         8         9
+#define     progress_blnk "                                                                                "
+//                         12345678901234567890123456789012345678901234567890123456789012345678901234567890
+//                                  1         2         3         4         5         6         7         8
+// Demo:                   Scanned          0/ 134845696 sectors (  0.00%); 0 files restored;  0/ 4 threads
 static bool have_progress     = false;
 
 
@@ -160,7 +161,7 @@ void show_progress( char const* fmt, ...) {
 
 	// Warn if we are too big
 	if ( text_len >= progress_len )
-		log_warning("Progress line needs &zu characters, but %d are the limit!",
+		log_warning("Progress line needs %zu characters, but %d are the limit!",
 			text_len, progress_len - 1);
 
 	// Lock, we do not want to be disturbed, now.
