@@ -76,6 +76,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/utils.h" />
+		<Unit filename="src/xfs_in.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/xfs_in.h" />
 		<Unit filename="src/xfs_sb.c">
 			<Option compilerVar="CC" />
 		</Unit>
