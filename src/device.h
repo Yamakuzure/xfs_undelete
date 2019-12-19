@@ -3,6 +3,7 @@
 #pragma once
 
 
+#define XFS_IN_MAGIC "IN"
 #define XFS_SB_MAGIC "XFSB"
 
 

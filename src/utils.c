@@ -39,6 +39,25 @@ int exists( char* path, int type ) {
 } /* exists */
 
 
+void format_uuid_str(char* str, uint8_t const* uuid) {
+	if (NULL == str) {
+		log_critical("%s", "BUG: Called with NULL 'str'!");
+		return;
+	}
+	if (NULL == uuid) {
+		log_critical("%s", "BUG: Called with NULL 'uuid'!");
+		return;
+	}
+
+	snprintf( str, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+	          uuid[ 0], uuid[ 1], uuid[ 2], uuid[ 3],
+	          uuid[ 4], uuid[ 5],
+	          uuid[ 6], uuid[ 6],
+	          uuid[ 8], uuid[ 7],
+	          uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15] );
+}
+
+
 char const* get_human_size( size_t full_size ) {
 	int         reduct        = 0;
 	static char result[8]     = { 0x0 };

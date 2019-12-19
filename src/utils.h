@@ -14,6 +14,18 @@
 int exists( char* path, int type );
 
 
+/** @brief format @a uuid into @a str
+  *
+  * @a str *must* have at least 16 bytes!
+  * @a tgt *must* have at least 37 bytes ! (36 chars plus \0)
+  * Output format is aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+  *
+  * @param[out] str  The target string
+  * @param[in]  uuid The source byte stream
+**/
+void format_uuid_str(char* str, uint8_t const* uuid);
+
+
 /** @brief return a pointer to a static string with @a full_size as human readable short version
   *
   * Scale the value down by 1024 until a a value <1024 is reached and add the
@@ -66,5 +78,13 @@ int mkdirs( char const* path );
 	| ( ( (x) & 0x0000ff0000000000 ) >> 24) \
 	| ( ( (x) & 0x00ff000000000000 ) >> 40) \
 	| ( ( (x) & 0xff00000000000000 ) >> 56) )
+
+// Some helpful wrappers for getting flipped data:
+#define get_flip8u( _b, _o) (_b)[(_o)]
+#define get_flip16u(_b, _o) flip16( *( ( uint16_t* )( (_b) + (_o) ) ) )
+#define get_flip32u(_b, _o) flip32( *( ( uint32_t* )( (_b) + (_o) ) ) )
+#define get_flip64s(_b, _o) flip64( *( (  int64_t* )( (_b) + (_o) ) ) )
+#define get_flip64u(_b, _o) flip64( *( ( uint64_t* )( (_b) + (_o) ) ) )
+
 
 #endif // PWX_XFS_UNDELETE_SRC_UITLS_H_INCLUDED

@@ -110,12 +110,7 @@ static int get_ag_base_info() {
 	sb_block_size = flip32( *( ( uint32_t* )( buf +  4 ) ) );
 	sb_ag_size    = flip32( *( ( uint32_t* )( buf + 84 ) ) );
 	sb_ag_count   = flip32( *( ( uint32_t* )( buf + 88 ) ) );
-	snprintf( sb_uuid_str, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-	          sb_uuid[ 0], sb_uuid[ 1], sb_uuid[ 2], sb_uuid[ 3],
-	          sb_uuid[ 4], sb_uuid[ 5],
-	          sb_uuid[ 6], sb_uuid[ 6],
-	          sb_uuid[ 8], sb_uuid[ 7],
-	          sb_uuid[10], sb_uuid[11], sb_uuid[12], sb_uuid[13], sb_uuid[14], sb_uuid[15] );
+	format_uuid_str(sb_uuid_str, sb_uuid);
 
 	full_ag_size     = ( size_t )sb_ag_size    * ( size_t )sb_block_size;
 	full_disk_blocks = ( size_t )sb_ag_count   * ( size_t )sb_ag_size;
