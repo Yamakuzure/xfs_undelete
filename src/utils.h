@@ -86,5 +86,9 @@ int mkdirs( char const* path );
 #define get_flip64s(_b, _o) flip64( *( (  int64_t* )( (_b) + (_o) ) ) )
 #define get_flip64u(_b, _o) flip64( *( ( uint64_t* )( (_b) + (_o) ) ) )
 
+// Just a shortcut to make some pointer manipulations easier
+#define FREE_PTR(p) if (p) { free(p); } p = NULL
+#define TAKE_PTR(p) (p); p = NULL
+
 
 #endif // PWX_XFS_UNDELETE_SRC_UITLS_H_INCLUDED
