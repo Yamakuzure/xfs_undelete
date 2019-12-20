@@ -47,6 +47,26 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="clean debug">
+				<Option output="./xfs_undelete" prefix_auto="1" extension_auto="1" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+				<MakeCommands>
+					<Build command="$make -f $makefile clean DEBUG=YES" />
+					<CompileFile command="$make -f $makefile $file DEBUG=YES" />
+					<Clean command="$make -f $makefile clean DEBUG=YES" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile clean DEBUG=YES" />
+					<SilentBuild command="$make -f $makefile clean DEBUG=YES &gt; $(CMD_NULL)" />
+				</MakeCommands>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
@@ -76,6 +96,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/utils.h" />
+		<Unit filename="src/xfs_ex.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/xfs_ex.h" />
 		<Unit filename="src/xfs_in.c">
 			<Option compilerVar="CC" />
 		</Unit>
