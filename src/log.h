@@ -47,7 +47,7 @@ void pwx_log( char const* location, log_level_t level, char const* message, ... 
   * @param[in] fmt  The format string
   * @param[in] ...  Format arguments
 **/
-void show_progress( char const* fmt, ...);
+void show_progress( char const* fmt, ... );
 
 
 /* --- Logging helper macros --- */

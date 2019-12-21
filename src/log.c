@@ -140,8 +140,8 @@ static void log_direct_out( char const* time, log_level_t level, char const* loc
 
 	mtx_lock( &output_lock );
 	FILE* target = level > LOG_WARNING ? stderr : stdout;
-	if (have_progress) {
-		fprintf( target, "\r%s\r", progress_blnk);
+	if ( have_progress ) {
+		fprintf( target, "\r%s\r", progress_blnk );
 		have_progress = false;
 	}
 	fprintf ( target, "%s\n", message );
@@ -150,7 +150,7 @@ static void log_direct_out( char const* time, log_level_t level, char const* loc
 }
 
 
-void show_progress( char const* fmt, ...) {
+void show_progress( char const* fmt, ... ) {
 
 	// We use a fixed buffer here, but warn if it is too small, as that is considered to be a bug
 	size_t  text_len = progress_len;
@@ -161,14 +161,14 @@ void show_progress( char const* fmt, ...) {
 
 	// Warn if we are too big
 	if ( text_len >= progress_len )
-		log_warning("Progress line needs %zu characters, but %d are the limit!",
-			text_len, progress_len - 1);
+		log_warning( "Progress line needs %zu characters, but %d are the limit!",
+		             text_len, progress_len - 1 );
 
 	// Lock, we do not want to be disturbed, now.
 	mtx_lock( &output_lock );
 
-	if (have_progress)
-		fprintf( stdout, "\r%s\r", progress_blnk);
+	if ( have_progress )
+		fprintf( stdout, "\r%s\r", progress_blnk );
 	fprintf ( stdout, "%s", progress_line );
 	have_progress = true;
 	fflush( stdout );
