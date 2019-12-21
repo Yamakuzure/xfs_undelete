@@ -101,7 +101,7 @@ ifeq (YES,$(DEBUG))
   CPPFLAGS       := ${CPPFLAGS} -DPWX_DEBUG
   COMMON_FLAGS   := -march=core2 -mtune=generic ${COMMON_FLAGS} ${GCC_STACKPROT}
   HAVE_SANITIZER := NO
-  
+
   # address sanitizer activition
   ifeq (YES,$(SANITIZE_ADDRESS))
     COMMON_FLAGS   := ${COMMON_FLAGS} -fsanitize=address
@@ -206,3 +206,10 @@ $(DEPDIR)/%.d: src/%.c
 	$(SED) -e 's,\($(notdir $*)\)\.o[ :]*,$(OBJDIR)/$(dir $*)\1.o $@ : ,g' \
 	       -e 's,$(PROJECT_DIR)/,,g' < $@.$$$$ > $@; \
 	$(RM) $@.$$$$
+
+# ------------------------------------
+# Include all dependency files
+# ------------------------------------
+ifeq (,$(findstring clean,$(MAKECMDGOALS)))
+  -include $(DEPENDS)
+endif
