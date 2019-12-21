@@ -18,7 +18,7 @@ typedef struct _xfs_ex {
   * @param[in]  data  The data to read
   * @return 0 on success, -1 one otherwise.
 **/
-int xfs_read_ex(xfs_ex* ex, uint8_t const* data);
+int xfs_read_ex( xfs_ex* ex, uint8_t const* data );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_EX_H_INCLUDED
