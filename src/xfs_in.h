@@ -7,19 +7,9 @@
 #include "xfs_sb.h"
 
 
+#include <stdbool.h>
 #include <stdint.h>
 
-
-/// @brief enum describing the upper nibble of the file type and permissions field
-typedef enum _file_type {
-	FT_FIFO = 0x1,
-	FT_CSD  = 0x2, //!< Character special device
-	FT_DIR  = 0x4, //!< Directory
-	FT_BSD  = 0x6, //!< Block special device
-	FT_FILE = 0x8, //!< Regular file
-	FT_SLN  = 0xa, //!< Symlink
-	FT_SCK  = 0xc  //!< Socket
-} e_file_type;
 
 /// @brief enum how data forks and extended attributes are stored
 typedef enum _store_type {
@@ -42,15 +32,14 @@ typedef struct _xattr {
 /// @brief structure of an inode
 typedef struct _xfs_in {
 	char        magic[3];       //!< Bytes   0-  1 : Magic number
-	e_file_type file_type;      //!<    Upper nibble of type_mode
-	uint8_t     file_modes[4];  //!<    Lower 12 bits of type_mode, stored as SUGO
-	uint8_t     version;        //!< Byte    4      : Version (v5 file system uses v3 inodes)
-	uint8_t     data_fork_type; //!< Byte    5      : Data fork type flag
-	uint16_t    num_links_v1;   //!< Bytes   6-  7 : v1 inode numlinks field (not used in v3)
+	uint16_t    type_mode;      //!< Bytes   2-  3 : file type and permissions        (ZEROED on delete)
+	uint8_t     version;        //!< Byte    4     : Version (v5 file system uses v3 inodes)
+	uint8_t     data_fork_type; //!< Byte    5     : Data fork type flag              (FORCED 2 on delete)
+	uint16_t    num_links_v1;   //!< Bytes   6-  7 : v1 inode numlinks field (not v3) (ZEROED on delete)
 	uint32_t    uid;            //!< Bytes   8- 11 : File owner UID
 	uint32_t    gid;            //!< Bytes  12- 15 : File GID
 
-	uint32_t    num_links_v2;   //!< Bytes  16- 19 : v2+ number of links
+	uint32_t    num_links_v2;   //!< Bytes  16- 19 : v2+ number of links              (ZEROED on delete)
 	uint16_t    project_id_lo;  //!< Bytes  20- 21 : Project ID (low)
 	uint16_t    project_id_hi;  //!< Bytes  22- 23 : Project ID (high)
 	uint16_t    inc_on_flush;   //!< Bytes  30- 31 : Increment on flush
@@ -62,14 +51,14 @@ typedef struct _xfs_in {
 	uint32_t    ctime_ep;       //!< Bytes  48- 51 : ctime epoch seconds
 	uint32_t    ctime_ns;       //!< Bytes  52- 55 : ctime nanoseconds
 
-	uint64_t    file_size;      //!< Bytes  56- 63 : File (data fork) size
-	uint64_t    file_blocks;    //!< Bytes  64- 71 : Number of blocks in data fork
+	uint64_t    file_size;      //!< Bytes  56- 63 : File (data fork) size            (ZEROED on delete)
+	uint64_t    file_blocks;    //!< Bytes  64- 71 : Number of blocks in data fork    (ZEROED on delete)
 	uint32_t    ext_size_hint;  //!< Bytes  72- 75 : Extent size hint
-	uint32_t    ext_used;       //!< Bytes  76- 79 : Number of data extents used
+	uint32_t    ext_used;       //!< Bytes  76- 79 : Number of data extents used      (ZEROED on delete)
 
 	uint16_t    num_xattr_exts; //!< Bytes  80- 81 : Number of extended attribute extents
-	uint8_t     xattr_off;      //!< Byte   82     : Inode offset to xattr (8 byte multiples)
-	uint8_t     xattr_type_flg; //!< Byte   83     : Extended attribute type flag
+	uint8_t     xattr_off;      //!< Byte   82     : Offset to xattr (* 8 byte )      (ZEROED on delete)
+	uint8_t     xattr_type_flg; //!< Byte   83     : Extended attribute type flag     (FORCED 2 on delete)
 	uint32_t    DMAPI_evnt_flg; //!< Bytes  84- 87 : DMAPI event mask
 	uint16_t    DMAPI_state;    //!< Bytes  88- 89 : DMAPI state
 	uint32_t    flags;          //!< Bytes  90- 91 : Flags
@@ -97,36 +86,42 @@ typedef struct _xfs_in {
 	xfs_ex*     d_ext_root;     //!< First data extent if used for file storage
 	uint8_t*    d_loc_data;     //!< Local data if the file is stored inside the inode
 	xfs_ex*     x_ext_root;     //!< First xattr extent if used for extended attributes
-	uint8_t*    x_loc_data;     //!< Local xattr if the extended attributes are stored inside the inode
 	xattr*      xattr_root;     //!< Root element of the xattr chain
 } xfs_in;
 
 
-/** @brief Unpack in->x_loc_data and extend in->xattr_root with the findings
+/** @brief Check whether @a data points to a deleted inode
   *
-  * Note  : For extents unpacking simply load a block and put it in x_loc_data
-  * Note 2: The function is void, because xattrs aren't mission ciritical. Error? Ignore the stuff!
-  *
-  * @param[in,out] in  pointer to the inode structure to work with
+  * @param[in] data  pointer to the data (minimum 84 bytes!)
+  * @return true if this is a deleted inode, false if it is anything else
 **/
-void unpack_xattr_data( xfs_in* in );
+bool is_deleted_inode(uint8_t const* data);
+
+
+/** @brief Unpack xattr data and create an xattr chain from the findings
+  *
+  * @param[in] data  pointer to the data to analyze
+  * @param[in] data_len size of the data to analyze
+  * @return A pointer to the root of an XATTR chain, or NULL on failure
+**/
+xattr* unpack_xattr_data( uint8_t const* data, size_t data_len );
 
 
 /** @brief Destroy xfs_in structures with this function
   * @param[out] in pointer to the struct pointer of the inode structure to destroy. Sets *in to NULL.
 **/
-void xfs_free_in(xfs_in** in);
+void xfs_free_in( xfs_in** in );
 
 
 /** @brief read inode data from a data block
   *
-  * There are no checks. The @a data block *must* have at least 176 bytes!
+  * There are no checks. The @a data block must have sb->inode_size bytes. Your responsibility!
   *
   * @param[out] in    The xfs_in inode structure to fill
   * @param[in]  sb    Pointer to the superblock structure this @a data belongs to.
   * @param[in]  data  Pointer to the data block to interpret.
 **/
-int xfs_read_in(xfs_in* in, xfs_sb const* sb, uint8_t const* data);
+int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_IN_H_INCLUDED
