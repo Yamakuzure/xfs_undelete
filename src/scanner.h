@@ -13,14 +13,14 @@
 typedef struct _scan_data {
 	uint32_t          ag_num;      //!< Number of the Allocation Group this thread shall handle
 	char const*       device;      //!< Pointer to the device string. No copy, is never changed.
-	_Atomic(bool)     do_start;    //!< Initialized with false, set to true when the thread may run.
-	_Atomic(bool)     do_stop;     //!< Initialized with false, set to true when the thread shall break off
-	_Atomic(bool)     is_finished; //!< Initialized with false, set to true when the thread is finished.
+	_Atomic( bool )     do_start;  //!< Initialized with false, set to true when the thread may run.
+	_Atomic( bool )     do_stop;   //!< Initialized with false, set to true when the thread shall break off
+	_Atomic( bool )     is_finished; //!< Initialized with false, set to true when the thread is finished.
 	xfs_sb*           sb_data;     //!< The Superblock data this thread shall handle
-	_Atomic(uint64_t) sec_scanned; //!< Increased by the thread, questioned by main
+	_Atomic( uint64_t ) sec_scanned; //!< Increased by the thread, questioned by main
 	mtx_t             sleep_lock;  //!< Used for conditional sleeping until signaled
 	uint32_t          thread_num;  //!< Number of the thread for logging
-	_Atomic(uint64_t) undeleted;   //!< Increased by the thread, questioned by main
+	_Atomic( uint64_t ) undeleted; //!< Increased by the thread, questioned by main
 	cnd_t             wakeup_call; //!< Used by the main thread to signal the thread to continue
 } scan_data_t;
 
@@ -33,7 +33,7 @@ typedef struct _scan_data {
   * @param[in] ag_num  Number of the allocation group the superblock describes
   * @return 0 on success, -1 on failure
 **/
-int init_scan_data(scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str, xfs_sb* sb_data, uint32_t ag_num);
+int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str, xfs_sb* sb_data, uint32_t ag_num );
 
 
 /** @brief Main scan function
