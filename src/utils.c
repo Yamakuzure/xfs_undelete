@@ -39,13 +39,13 @@ int exists( char* path, int type ) {
 } /* exists */
 
 
-void format_uuid_str(char* str, uint8_t const* uuid) {
-	if (NULL == str) {
-		log_critical("%s", "BUG: Called with NULL 'str'!");
+void format_uuid_str( char* str, uint8_t const* uuid ) {
+	if ( NULL == str ) {
+		log_critical( "%s", "BUG: Called with NULL 'str'!" );
 		return;
 	}
-	if (NULL == uuid) {
-		log_critical("%s", "BUG: Called with NULL 'uuid'!");
+	if ( NULL == uuid ) {
+		log_critical( "%s", "BUG: Called with NULL 'uuid'!" );
 		return;
 	}
 

@@ -23,7 +23,7 @@ int exists( char* path, int type );
   * @param[out] str  The target string
   * @param[in]  uuid The source byte stream
 **/
-void format_uuid_str(char* str, uint8_t const* uuid);
+void format_uuid_str( char* str, uint8_t const* uuid );
 
 
 /** @brief return a pointer to a static string with @a full_size as human readable short version
@@ -61,23 +61,23 @@ int mkdirs( char const* path );
 
 #define flip16(x)                  \
 	( ( ( (x) & 0x00ff ) << 8) \
-	| ( ( (x) & 0xff00 ) >> 8) )
+	  | ( ( (x) & 0xff00 ) >> 8) )
 
 #define flip32(x)                       \
 	( ( ( (x) & 0x000000ff ) << 24) \
-	| ( ( (x) & 0x0000ff00 ) <<  8) \
-	| ( ( (x) & 0x00ff0000 ) >>  8) \
-	| ( ( (x) & 0xff000000 ) >> 24) )
+	  | ( ( (x) & 0x0000ff00 ) <<  8) \
+	  | ( ( (x) & 0x00ff0000 ) >>  8) \
+	  | ( ( (x) & 0xff000000 ) >> 24) )
 
 #define flip64(x)                       \
 	( ( ( (x) & 0x00000000000000ff ) << 56) \
-	| ( ( (x) & 0x000000000000ff00 ) << 40) \
-	| ( ( (x) & 0x0000000000ff0000 ) << 24) \
-	| ( ( (x) & 0x00000000ff000000 ) <<  8) \
-	| ( ( (x) & 0x000000ff00000000 ) >>  8) \
-	| ( ( (x) & 0x0000ff0000000000 ) >> 24) \
-	| ( ( (x) & 0x00ff000000000000 ) >> 40) \
-	| ( ( (x) & 0xff00000000000000 ) >> 56) )
+	  | ( ( (x) & 0x000000000000ff00 ) << 40) \
+	  | ( ( (x) & 0x0000000000ff0000 ) << 24) \
+	  | ( ( (x) & 0x00000000ff000000 ) <<  8) \
+	  | ( ( (x) & 0x000000ff00000000 ) >>  8) \
+	  | ( ( (x) & 0x0000ff0000000000 ) >> 24) \
+	  | ( ( (x) & 0x00ff000000000000 ) >> 40) \
+	  | ( ( (x) & 0xff00000000000000 ) >> 56) )
 
 // Some helpful wrappers for getting flipped data:
 #define get_flip8u( _b, _o) (_b)[(_o)]
