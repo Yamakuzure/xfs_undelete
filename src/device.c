@@ -37,12 +37,12 @@ static char     sb_uuid_str[37] = { 0x0 }; /// String representation of the UUID
 static uint32_t sb_ag_size      = 0;       /// Bytes 84-87 : AG size (in blocks)
 
 // Global XFS core information we also need elsewhere
-size_t   full_ag_size     = 0;    /// sb_ag_size * sb_block_size
-size_t   full_disk_blocks = 0;    /// sb_ag_count * sb_ag_size
-size_t   full_disk_size   = 0;    /// full_disk_blocks * sb_block_size
-uint32_t sb_ag_count      = 0;    /// Bytes 88-91 : Number of AGs (normally 0x04)
-uint32_t sb_block_size    = 0;    /// Bytes  4- 7 : Block Size (in bytes)
-xfs_sb*  superblocks      = NULL; /// All AGs are loaded in here
+size_t   full_ag_bytes    = 0;    //!< sb_ag_size * sb_block_size
+size_t   full_disk_blocks = 0;    //!< sb_ag_count * sb_ag_size
+size_t   full_disk_size   = 0;    //!< full_disk_blocks * sb_block_size
+uint32_t sb_ag_count      = 0;    //!< Bytes 88-91 : Number of AGs (normally 0x04)
+uint32_t sb_block_size    = 0;    //!< Bytes  4- 7 : Block Size (in bytes)
+xfs_sb*  superblocks      = NULL; //!< All AGs are loaded in here
 
 // Global disk information
 bool disk_is_ssd = false;
@@ -110,16 +110,16 @@ static int get_ag_base_info() {
 	sb_block_size = flip32( *( ( uint32_t* )( buf +  4 ) ) );
 	sb_ag_size    = flip32( *( ( uint32_t* )( buf + 84 ) ) );
 	sb_ag_count   = flip32( *( ( uint32_t* )( buf + 88 ) ) );
-	format_uuid_str(sb_uuid_str, sb_uuid);
+	format_uuid_str( sb_uuid_str, sb_uuid );
 
-	full_ag_size     = ( size_t )sb_ag_size    * ( size_t )sb_block_size;
+	full_ag_bytes     = ( size_t )sb_ag_size    * ( size_t )sb_block_size;
 	full_disk_blocks = ( size_t )sb_ag_count   * ( size_t )sb_ag_size;
 	full_disk_size   = ( size_t )sb_block_size * full_disk_blocks;
 
 	log_debug( "Magic     : %s", sb_magic );
 	log_debug( "UUID      : %s", sb_uuid_str );
 	log_debug( "AG Count  : %u", sb_ag_count );
-	log_debug( "AG Size   : %u (%s)", sb_ag_size, get_human_size( full_ag_size ) );
+	log_debug( "AG Size   : %u (%s)", sb_ag_size, get_human_size( full_ag_bytes ) );
 	log_debug( "Block Size: %u", sb_block_size );
 	log_debug( "Disk Size : %s", get_human_size( full_disk_size ) );
 
@@ -219,35 +219,35 @@ int set_device( char const* device_path ) {
 	 * ========================================================
 	 */
 	char  disk_part[6] = { 0x0 };
-	char* cur_p        = strrchr(device, '/');
+	char* cur_p        = strrchr( device, '/' );
 
-	if (cur_p) {
+	if ( cur_p ) {
 		++cur_p;
-		for ( int i = 0; *cur_p && !isdigit(*cur_p) && (i < 5); ++i, ++cur_p ) {
+		for ( int i = 0; *cur_p && !isdigit( *cur_p ) && ( i < 5 ); ++i, ++cur_p ) {
 			disk_part[i] = *cur_p;
 		}
 	}
 
-	if (strlen(disk_part)) {
+	if ( strlen( disk_part ) ) {
 		char rot_file[40] = { 0x0 };
-		int  written      = snprintf(rot_file, 40, "/sys/block/%s/queue/rotational", disk_part);
-		if (written < 40) {
-			FILE* rot = fopen(rot_file, "r");
+		int  written      = snprintf( rot_file, 40, "/sys/block/%s/queue/rotational", disk_part );
+		if ( written < 40 ) {
+			FILE* rot = fopen( rot_file, "r" );
 			char  res = 0x0;
-			if (rot) {
-				if ( (1 == fread(&res, 1, 1, rot)) && (res == '0') )
+			if ( rot ) {
+				if ( ( 1 == fread( &res, 1, 1, rot ) ) && ( res == '0' ) )
 					disk_is_ssd = true;
-				fclose(rot);
+				fclose( rot );
 			} else
-				log_error("Unable to open %s: %m [%d]", rot_file, errno);
+				log_error( "Unable to open %s: %m [%d]", rot_file, errno );
 		} else
-			log_error("Bug (?) device disk part \"%s\" too large?", disk_part);
+			log_error( "Bug (?) device disk part \"%s\" too large?", disk_part );
 	}
 
-	if (disk_is_ssd)
-		log_info("/dev/%s seems to be an SSD -> Going multi-threaded!", disk_part);
+	if ( disk_is_ssd )
+		log_info( "/dev/%s seems to be an SSD -> Going multi-threaded!", disk_part );
 	else
-		log_info("/dev/%s assumed to be a rotating disk -> Going single-threaded", disk_part);
+		log_info( "/dev/%s assumed to be a rotating disk -> Going single-threaded", disk_part );
 
 	return 0;
 }

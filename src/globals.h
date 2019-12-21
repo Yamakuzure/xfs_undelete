@@ -12,7 +12,7 @@
 
 
 extern bool     disk_is_ssd;      /// If true, we can go multi-threaded
-extern size_t   full_ag_size;     /// sb_ag_size * sb_block_size
+extern size_t   full_ag_bytes;    /// sb_ag_size * sb_block_size
 extern size_t   full_disk_blocks; /// fsb_ag_count * sb_ag_size
 extern size_t   full_disk_size;   /// full_disk_blocks * sb_block_size
 extern uint32_t sb_ag_count;      /// Number of allocation groups
