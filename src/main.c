@@ -80,44 +80,44 @@ int main( int argc, char const* argv[] ) {
 	uint32_t threads_ran = 0;
 
 	// First we need scan data for each scanner (aka allocation group)
-	scan_data = calloc(sb_ag_count, sizeof(scan_data_t));
-	if (NULL == scan_data) {
-		log_critical("Unable to allocate %zu bytes for %lu instances of scan_data_t: %m [%d]",
-			(size_t)sb_ag_count * sizeof(scan_data_t), sb_ag_count, errno);
+	scan_data = calloc( sb_ag_count, sizeof( scan_data_t ) );
+	if ( NULL == scan_data ) {
+		log_critical( "Unable to allocate %zu bytes for %lu instances of scan_data_t: %m [%d]",
+		              ( size_t )sb_ag_count * sizeof( scan_data_t ), sb_ag_count, errno );
 		goto cleanup;
 	}
-	for (uint32_t i = 0; i < sb_ag_count; ++i) {
-		if (init_scan_data(&scan_data[i], i, device_path, &superblocks[i], i))
+	for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
+		if ( init_scan_data( &scan_data[i], i, device_path, &superblocks[i], i ) )
 			goto cleanup; // Note: Already logged
 	}
 
 	// And we need enough thrd_t instances of course
-	threads = calloc(sb_ag_count, sizeof(thrd_t));
-	if (NULL == threads) {
-		log_critical("Unable to allocate %zu bytes for %lu instances of thrd_t: %m [%d]",
-			(size_t)sb_ag_count * sizeof(thrd_t), sb_ag_count, errno);
+	threads = calloc( sb_ag_count, sizeof( thrd_t ) );
+	if ( NULL == threads ) {
+		log_critical( "Unable to allocate %zu bytes for %lu instances of thrd_t: %m [%d]",
+		              ( size_t )sb_ag_count * sizeof( thrd_t ), sb_ag_count, errno );
 		goto cleanup;
 	}
 
 	// Now we can fire up our threads. Sequentially or parallel, depending on disk_is_ssd
-	while (threads_ran < sb_ag_count) {
+	while ( threads_ran < sb_ag_count ) {
 		uint32_t next_thread_num = threads_ran;
 
 		// --- Create the threads ---
 		// --------------------------
-		for ( int i = next_thread_num; (i - threads_ran) < max_threads; ++i) {
-			log_debug("Creating thread %lu/%lu (%lu/%lu)",
-				i + 1, sb_ag_count, (i - threads_ran + 1), max_threads);
+		for ( int i = next_thread_num; ( i - threads_ran ) < max_threads; ++i ) {
+			log_debug( "Creating thread %lu/%lu (%lu/%lu)",
+			           i + 1, sb_ag_count, ( i - threads_ran + 1 ), max_threads );
 			thrd_create( &threads[i], scanner, &scan_data[i] );
 		}
 
 		// --- Start the threads ---
 		// -------------------------
-		for ( int i = next_thread_num; (i - threads_ran) < max_threads; ++i) {
-			log_debug("Starting thread %lu/%lu (%lu/%lu)",
-				i + 1, sb_ag_count, (i - threads_ran + 1), max_threads);
+		for ( int i = next_thread_num; ( i - threads_ran ) < max_threads; ++i ) {
+			log_debug( "Starting thread %lu/%lu (%lu/%lu)",
+			           i + 1, sb_ag_count, ( i - threads_ran + 1 ), max_threads );
 			scan_data[i].do_start = true;
-			cnd_signal(&scan_data[i].wakeup_call);
+			cnd_signal( &scan_data[i].wakeup_call );
 		}
 
 		// --- Watchdog the threads ---
@@ -125,13 +125,13 @@ int main( int argc, char const* argv[] ) {
 		uint32_t threads_running   = 1;
 		struct timespec sleep_time = { .tv_nsec = 500000000 };
 
-		while (threads_running) {
+		while ( threads_running ) {
 			uint64_t files_undeleted = 0;
 			uint64_t sectors_scanned = 0;
 			threads_running = 0;
 
 			// Here we can go through the full set of data
-			for ( uint32_t i = 0; i < max_threads; ++i) {
+			for ( uint32_t i = 0; i < max_threads; ++i ) {
 				if ( !scan_data[i].is_finished )
 					threads_running++;
 				files_undeleted += scan_data[i].undeleted;
@@ -142,9 +142,9 @@ int main( int argc, char const* argv[] ) {
 			show_progress( "Scanned % 10llu/% 10llu sectors (%6.2f%%);"
 			               " %llu files restored;"
 			               " % 2lu/% 2lu threads",
-					sectors_scanned, full_disk_blocks,
-					(double)sectors_scanned / (double)full_disk_blocks * 100.,
-					files_undeleted, threads_running, max_threads);
+			               sectors_scanned, full_disk_blocks,
+			               ( double )sectors_scanned / ( double )full_disk_blocks * 100.,
+			               files_undeleted, threads_running, max_threads );
 
 			// Let's sleep for half a second
 			thrd_sleep( &sleep_time, NULL );
@@ -152,13 +152,13 @@ int main( int argc, char const* argv[] ) {
 
 		// --- Join the threads ---
 		// ------------------------
-		for ( int i = next_thread_num; (i - threads_ran) < max_threads; ++i) {
+		for ( int i = next_thread_num; ( i - threads_ran ) < max_threads; ++i ) {
 			int t_res = 0;
-			log_debug("Joining thread %lu/%lu (%lu/%lu)",
-				i + 1, sb_ag_count, (i - threads_ran) + 1, max_threads);
+			log_debug( "Joining thread %lu/%lu (%lu/%lu)",
+			           i + 1, sb_ag_count, ( i - threads_ran ) + 1, max_threads );
 			thrd_join( threads[i], &t_res );
-			if (t_res) {
-				log_warning("Thread &lu reported a problem! [%d]", i, t_res);
+			if ( t_res ) {
+				log_warning( "Thread &lu reported a problem! [%d]", i, t_res );
 				res = t_res;
 			}
 		}
