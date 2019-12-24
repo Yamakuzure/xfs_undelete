@@ -72,6 +72,10 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="Makefile" />
+		<Unit filename="src/analyzer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/analyzer.h" />
 		<Unit filename="src/common.h" />
 		<Unit filename="src/device.c">
 			<Option compilerVar="CC" />
@@ -81,6 +85,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/globals.h" />
+		<Unit filename="src/inode_queue.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/inode_queue.h" />
 		<Unit filename="src/log.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -96,6 +104,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/utils.h" />
+		<Unit filename="src/writer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/writer.h" />
 		<Unit filename="src/xfs_ex.c">
 			<Option compilerVar="CC" />
 		</Unit>
