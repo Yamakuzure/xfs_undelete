@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <mntent.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -25,9 +26,10 @@
 
 
 // General global variables
-static char*     device           = NULL;
 static char*     mntDir           = NULL;
 static char*     mntOpts          = NULL;
+static char*     source_device    = NULL;
+static char*     target_path      = NULL;
 static bool      was_remounted_ro = false;
 
 // XFS core information we need right here.
@@ -45,28 +47,26 @@ uint32_t sb_block_size    = 0;    //!< Bytes  4- 7 : Block Size (in bytes)
 xfs_sb*  superblocks      = NULL; //!< All AGs are loaded in here
 
 // Global disk information
-bool disk_is_ssd = false;
+bool src_is_ssd = false;
+bool tgt_is_ssd = false;
 
 
-void free_device( void ) {
-	if ( device ) {
+void free_devices( void ) {
+	if ( source_device ) {
 		if ( was_remounted_ro ) {
-			log_info( "Restoring mount opts on %s ...", device );
+			log_info( "Restoring mount opts on %s ...", source_device );
 			if ( mount( NULL, mntDir, NULL, MS_REMOUNT, NULL ) ) {
-				log_error( "Remount rw %s failed, %m (%d)", device, errno );
+				log_error( "Remount rw %s failed, %m (%d)", source_device, errno );
 				log_error( "Mount options: %s", mntOpts );
 			} else
-				log_info( "Mount options on %s restored!", device );
+				log_info( "Mount options on %s restored!", source_device );
 		}
-		free( device );
-		device = NULL;
+		FREE_PTR(source_device);
 	}
-	if ( mntDir )
-		free( mntDir );
-	if ( mntOpts )
-		free( mntOpts );
-	if ( superblocks )
-		free( superblocks );
+	FREE_PTR( mntDir );
+	FREE_PTR( mntOpts );
+	FREE_PTR( superblocks );
+	FREE_PTR( target_path );
 }
 
 
@@ -81,11 +81,11 @@ static int get_ag_base_info() {
 	 * Bytes 88-91 : Number of AGs (normally 0x04)
 	*/
 	uint8_t buf[92] = { 0x0 };
-	int     fd      = open( device, O_RDONLY | O_NOFOLLOW );
+	int     fd      = open( source_device, O_RDONLY | O_NOFOLLOW );
 	int     res     = fd;
 
 	if ( -1 == res ) {
-		log_error( "Can not open %s for reading: %m [%d]", device, errno );
+		log_error( "Can not open %s for reading: %m [%d]", source_device, errno );
 		return -1;
 	}
 
@@ -93,7 +93,7 @@ static int get_ag_base_info() {
 	close( fd );
 
 	if ( -1 == res ) {
-		log_error( "Can not read 92 bytes from %s : %m [%d]", device, errno );
+		log_error( "Can not read 92 bytes from %s : %m [%d]", source_device, errno );
 		return -1;
 	}
 
@@ -127,7 +127,7 @@ static int get_ag_base_info() {
 }
 
 int scan_superblocks() {
-	if ( NULL == device ) {
+	if ( NULL == source_device ) {
 		log_critical( "BUG! %s called before calling set_device()!", __func__ );
 		return -1;
 	}
@@ -144,10 +144,10 @@ int scan_superblocks() {
 		return -1;
 	}
 
-	// Now we need the device to be opened.
-	int fd  = open( device, O_RDONLY | O_NOFOLLOW );
+	// Now we need the source_device to be opened.
+	int fd  = open( source_device, O_RDONLY | O_NOFOLLOW );
 	if ( -1 == fd ) {
-		log_error( "Can not open %s for reading: %m [%d]", device, errno );
+		log_error( "Can not open %s for reading: %m [%d]", source_device, errno );
 		return -1;
 	}
 
@@ -166,60 +166,10 @@ int scan_superblocks() {
 }
 
 
-int set_device( char const* device_path ) {
-
-	if ( device )
-		free_device();
-
-	if ( device_path )
-		device = strdup( device_path );
-	else {
-		log_critical( "BUG! %s called without device path!", __func__ );
-		return -1;
-	}
-
-
-	/* === See where the device is mounted ===
-	 * =======================================
-	 */
-	struct mntent* ent     = NULL;
-	FILE*          entFile = setmntent( "/proc/mounts", "r" );
-
-	if ( NULL == entFile ) {
-		log_error( "Could not open /proc/mounts: %m ($d)", errno );
-		return -1;
-	}
-	while ( ( NULL == mntDir ) && ( NULL != ( ent = getmntent( entFile ) ) ) ) {
-		if ( 0 == strcmp( ent->mnt_fsname, device ) ) {
-			mntDir  = strdup( ent->mnt_dir );
-			mntOpts = strdup( ent->mnt_opts );
-		}
-	}
-	endmntent( entFile );
-
-	/* === Remount the target filesystem read-only if mounted ===
-	 * ==========================================================
-	 */
-	if ( mntDir ) {
-		char* has_rw = strstr( mntOpts, MNTOPT_RW );
-		if ( has_rw ) {
-			log_info( "%s mounted rw at %s, trying to remount ro...", device, mntDir );
-			if ( mount( NULL, mntDir, NULL, MS_REMOUNT | MS_RDONLY, NULL ) ) {
-				log_critical( "Remount ro %s failed, %m (%d)\n", device, errno );
-				return -1;
-			}
-			was_remounted_ro = true;
-			log_info( "%s remounted read-only.", device );
-		} else
-			log_info( "%s mounted ro at %s", device, mntDir );
-	}
-
-	/* === Check whether the device is an SSD. We do not    ===
-	 * === want to got multi-threaded on a rotational disk! ===
-	 * ========================================================
-	 */
-	char  disk_part[6] = { 0x0 };
-	char* cur_p        = strrchr( device, '/' );
+/// @brief little helper, because we need this twice.
+int is_device_ssd(bool* tgt, char const* dev) {
+	char        disk_part[6] = { 0x0 };
+	char const* cur_p        = strrchr( dev, '/' );
 
 	if ( cur_p ) {
 		++cur_p;
@@ -236,18 +186,154 @@ int set_device( char const* device_path ) {
 			char  res = 0x0;
 			if ( rot ) {
 				if ( ( 1 == fread( &res, 1, 1, rot ) ) && ( res == '0' ) )
-					disk_is_ssd = true;
+					*tgt = true;
+				else
+					*tgt = false;
 				fclose( rot );
-			} else
+			} else {
 				log_error( "Unable to open %s: %m [%d]", rot_file, errno );
-		} else
+				return -1;
+			}
+		} else {
 			log_error( "Bug (?) device disk part \"%s\" too large?", disk_part );
+			return -1;
+		}
 	}
 
-	if ( disk_is_ssd )
-		log_info( "/dev/%s seems to be an SSD -> Going multi-threaded!", disk_part );
+	return 0;
+}
+
+
+int set_source_device( char const* device_path ) {
+
+	if ( source_device )
+		free_devices();
+
+	if ( device_path )
+		source_device = strdup( device_path );
+	else {
+		log_critical( "%s", "BUG! Called without device_path!" );
+		return -1;
+	}
+
+
+	/* === See where the device is mounted ===
+	 * =======================================
+	 */
+	struct mntent* ent     = NULL;
+	FILE*          entFile = setmntent( "/proc/mounts", "r" );
+
+	if ( NULL == entFile ) {
+		log_error( "Could not open /proc/mounts: %m ($d)", errno );
+		return -1;
+	}
+	while ( ( NULL == mntDir ) && ( NULL != ( ent = getmntent( entFile ) ) ) ) {
+		if ( 0 == strcmp( ent->mnt_fsname, source_device ) ) {
+			mntDir  = strdup( ent->mnt_dir );
+			mntOpts = strdup( ent->mnt_opts );
+		}
+	}
+	endmntent( entFile );
+
+	/* === Remount the target filesystem read-only if mounted ===
+	 * ==========================================================
+	 */
+	if ( mntDir ) {
+		char* has_rw = strstr( mntOpts, MNTOPT_RW );
+		if ( has_rw ) {
+			log_info( "%s mounted rw at %s, trying to remount ro...", source_device, mntDir );
+			if ( mount( NULL, mntDir, NULL, MS_REMOUNT | MS_RDONLY, NULL ) ) {
+				log_critical( "Remount ro %s failed, %m (%d)\n", source_device, errno );
+				return -1;
+			}
+			was_remounted_ro = true;
+			log_info( "%s remounted read-only.", source_device );
+		} else
+			log_info( "%s mounted ro at %s", source_device, mntDir );
+	}
+
+	/* === Check whether the device is an SSD. We do not    ===
+	 * === want to got multi-threaded on a rotational disk! ===
+	 * ========================================================
+	 */
+	if ( -1 == is_device_ssd( &src_is_ssd, source_device ) ) {
+		log_error( "Can not determine whether %s is rotational", source_device );
+		log_warning(" Assuming %s is a spinning disk and going to read single-threaded.", source_device );
+		src_is_ssd = false;
+	} else if ( src_is_ssd )
+		log_info( "%s seems to be an SSD -> Reading multi-threaded!", source_device );
 	else
-		log_info( "/dev/%s assumed to be a rotating disk -> Going single-threaded", disk_part );
+		log_info( "%s assumed to be a rotating disk -> Reading single-threaded", source_device );
 
 	return 0;
+}
+
+
+int set_target_path( char const* dir_path ) {
+	if ( target_path )
+		free_devices();
+
+	if ( dir_path )
+		target_path = strdup( dir_path );
+	else {
+		log_critical( "%s", "BUG! Called without dir_path!" );
+		return -1;
+	}
+
+	/* === Create the target path if needed ===
+	 * ========================================
+	 */
+	if (mkdirs( target_path ))
+		return -1;
+
+	/* === See on which device the target directory is mounted ===
+	 * ===========================================================
+	 */
+	char  full_path[PATH_MAX] = { 0x0 };
+	char* target_device       = NULL;
+	if ( NULL == realpath( target_path, full_path ) ) {
+		log_critical("Unable to resolve %s into a real path!", target_path);
+		return -1;
+	}
+
+	struct mntent* ent     = NULL;
+	FILE*          entFile = setmntent( "/proc/mounts", "r" );
+
+	if ( NULL == entFile ) {
+		log_error( "Could not open /proc/mounts: %m ($d)", errno );
+		return -1;
+	}
+	while ( NULL != ( ent = getmntent( entFile ) ) ) {
+		if ( full_path == strstr( full_path, ent->mnt_dir ) ) {
+			// Note: This means that 'full_path' begins with 'ent->mnt_dir'
+			if (target_device && ( strlen(ent->mnt_fsname) > strlen(target_device) ) ) {
+				FREE_PTR( target_device );
+			}
+			// Note: This re-assignment solves problems with sub-mounts
+			if ( NULL == target_device )
+				target_device = strdup( ent->mnt_fsname );
+		}
+	}
+	endmntent( entFile );
+
+	if ( NULL == target_device ) {
+		log_critical( "Unable to determine on which device %s is mounted!", target_path );
+		return -1;
+	}
+
+	/* === Check whether the device is an SSD. We do not    ===
+	 * === want to got multi-threaded on a rotational disk! ===
+	 * ========================================================
+	 */
+	if ( -1 == is_device_ssd( &tgt_is_ssd, target_device ) ) {
+		log_error( "Can not determine whether %s is rotational", target_device );
+		log_warning(" Assuming %s is a spinning disk and going to read single-threaded.", target_device );
+		tgt_is_ssd = false;
+	} else if ( tgt_is_ssd )
+		log_info( "%s seems to be an SSD -> Writing multi-threaded!", target_device );
+	else
+		log_info( "%s assumed to be a rotating disk -> Writing single-threaded", target_device );
+
+	return 0;
+
 }
