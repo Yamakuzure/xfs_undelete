@@ -61,23 +61,23 @@ int mkdirs( char const* path );
 
 #define flip16(x)                  \
 	( ( ( (x) & 0x00ff ) << 8) \
-	  | ( ( (x) & 0xff00 ) >> 8) )
+	| ( ( (x) & 0xff00 ) >> 8) )
 
 #define flip32(x)                       \
 	( ( ( (x) & 0x000000ff ) << 24) \
-	  | ( ( (x) & 0x0000ff00 ) <<  8) \
-	  | ( ( (x) & 0x00ff0000 ) >>  8) \
-	  | ( ( (x) & 0xff000000 ) >> 24) )
+	| ( ( (x) & 0x0000ff00 ) <<  8) \
+	| ( ( (x) & 0x00ff0000 ) >>  8) \
+	| ( ( (x) & 0xff000000 ) >> 24) )
 
-#define flip64(x)                       \
+#define flip64(x)                               \
 	( ( ( (x) & 0x00000000000000ff ) << 56) \
-	  | ( ( (x) & 0x000000000000ff00 ) << 40) \
-	  | ( ( (x) & 0x0000000000ff0000 ) << 24) \
-	  | ( ( (x) & 0x00000000ff000000 ) <<  8) \
-	  | ( ( (x) & 0x000000ff00000000 ) >>  8) \
-	  | ( ( (x) & 0x0000ff0000000000 ) >> 24) \
-	  | ( ( (x) & 0x00ff000000000000 ) >> 40) \
-	  | ( ( (x) & 0xff00000000000000 ) >> 56) )
+	| ( ( (x) & 0x000000000000ff00 ) << 40) \
+	| ( ( (x) & 0x0000000000ff0000 ) << 24) \
+	| ( ( (x) & 0x00000000ff000000 ) <<  8) \
+	| ( ( (x) & 0x000000ff00000000 ) >>  8) \
+	| ( ( (x) & 0x0000ff0000000000 ) >> 24) \
+	| ( ( (x) & 0x00ff000000000000 ) >> 40) \
+	| ( ( (x) & 0xff00000000000000 ) >> 56) )
 
 // Some helpful wrappers for getting flipped data:
 #define get_flip8u( _b, _o) (_b)[(_o)]
@@ -89,6 +89,7 @@ int mkdirs( char const* path );
 // Just a shortcut to make some pointer manipulations easier
 #define FREE_PTR(p) if (p) { free(p); } p = NULL
 #define TAKE_PTR(p) (p); p = NULL
+#define RELEASE(p)  (p)->prev = NULL; (p)->next = NULL
 
 
 #endif // PWX_XFS_UNDELETE_SRC_UITLS_H_INCLUDED
