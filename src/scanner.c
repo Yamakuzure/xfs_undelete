@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "globals.h"
+#include "inode_queue.h"
 #include "log.h"
 #include "scanner.h"
 
@@ -29,15 +30,16 @@ int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const* dev_s
 		return -1;
 	}
 
-	scan_data->ag_num      = ag_num;
-	scan_data->device      = dev_str;
-	scan_data->do_start    = false;
-	scan_data->do_stop     = false;
-	scan_data->is_finished = false;
-	scan_data->sb_data     = sb_data;
-	scan_data->sec_scanned = 0;
-	scan_data->thread_num  = thrd_num;
-	scan_data->undeleted   = 0;
+	scan_data->ag_num       = ag_num;
+	scan_data->device       = dev_str;
+	scan_data->do_start     = false;
+	scan_data->do_stop      = false;
+	scan_data->found_dirent = 0;
+	scan_data->found_inodes = 0;
+	scan_data->is_finished  = false;
+	scan_data->sb_data      = sb_data;
+	scan_data->sec_scanned  = 0;
+	scan_data->thread_num   = thrd_num;
 
 	return 0;
 }
