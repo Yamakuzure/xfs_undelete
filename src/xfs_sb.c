@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "device.h"
+#include "globals.h"
 #include "log.h"
 #include "utils.h"
 #include "xfs_sb.h"
@@ -45,7 +46,7 @@ int xfs_read_sb( xfs_sb* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t
 
 	// Now that we are here, get the data!
 	memcpy( sb->magic,     buf,        4 );
-	if ( strncmp( sb->magic, XFS_SB_MAGIC, 4 ) ) {
+	if ( memcmp( sb->magic, XFS_SB_MAGIC, 4 ) ) {
 		log_critical( "Wrong magic: 0x%02x%02x%02x%02x instead of 0x%02x%02x%02x%02x",
 		              sb->magic[0],    sb->magic[1],    sb->magic[2],    sb->magic[3],
 		              XFS_SB_MAGIC[0], XFS_SB_MAGIC[1], XFS_SB_MAGIC[2], XFS_SB_MAGIC[3] );
