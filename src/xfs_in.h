@@ -3,11 +3,13 @@
 #pragma once
 
 
+#include "file_type.h"
 #include "xfs_ex.h"
 #include "xfs_sb.h"
 
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 
@@ -87,15 +89,24 @@ typedef struct _xfs_in {
 	uint8_t*    d_loc_data;     //!< Local data if the file is stored inside the inode
 	xfs_ex*     x_ext_root;     //!< First xattr extent if used for extended attributes
 	xattr*      xattr_root;     //!< Root element of the xattr chain
+
+	/* Some helper values for internal use */
+	e_file_type ftype;
+	bool        is_deleted;
+	bool        is_directory;
 } xfs_in;
 
 
-/** @brief Check whether @a data points to a deleted inode
+/** @brief Check whether the given @a data starts an xattr block
   *
-  * @param[in] data  pointer to the data (minimum 84 bytes!)
-  * @return true if this is a deleted inode, false if it is anything else
+  * @param[in] data  pointer to the data to check, must have at least 10 bytes
+  * @param[in] data_size  The amount of bytes that can hold xattr values. Needed to check fond size values.
+  * @param[out] x_size  If not NULL, this value is set to the size of the xattr local block, including header
+  * @param[out] x_count If not Null, this value is set to the number of xattr entries
+  * @param[out] padding  If not NULL, this value is set to the number of padding bytes
+  * @return true if this starts an xattr block, false otherwise
 **/
-bool is_deleted_inode(uint8_t const* data);
+bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count, uint8_t* padding);
 
 
 /** @brief Unpack xattr data and create an xattr chain from the findings
@@ -120,8 +131,10 @@ void xfs_free_in( xfs_in** in );
   * @param[out] in    The xfs_in inode structure to fill
   * @param[in]  sb    Pointer to the superblock structure this @a data belongs to.
   * @param[in]  data  Pointer to the data block to interpret.
+  * @param[in]  fd    File Descriptor for reading from the source device.
+  * @return 0 on success, -1 on error
 **/
-int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data );
+int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_IN_H_INCLUDED

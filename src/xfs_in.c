@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "device.h"
+#include "forensics.h"
 #include "globals.h"
 #include "log.h"
 #include "utils.h"
@@ -15,8 +16,8 @@
 #include <string.h>
 
 
-#define DATA_START_V1 0x64
-#define DATA_START_V3 0xB0
+size_t DATA_START_V1 = 0x64;
+size_t DATA_START_V3 = 0xB0;
 
 
 static int build_data_map( xfs_in* in, uint16_t inode_size, uint8_t const* data ) {
@@ -81,6 +82,7 @@ static int build_data_map( xfs_in* in, uint16_t inode_size, uint8_t const* data 
 			next = NULL;
 		}
 	} else if ( ST_BTREE == in->data_fork_type ) {
+		/// @todo Implement B-Tree reading
 	} else {
 		log_error( "Ignoring inode %llu with unknown data fork type 0x%02x!",
 		           in->inode_id, in->data_fork_type );
@@ -158,7 +160,7 @@ static void build_xattr_map( xfs_in* in, uint16_t inode_size, uint8_t const* dat
 		}
 	} else if ( ST_BTREE == in->xattr_type_flg ) {
 		/* Can they even exist? */
-		log_error( "Special device xattr btrees (0x%02x) are not supported.", in->xattr_type_flg );
+		log_error( "xattr btrees (0x%02x) are not supported.", in->xattr_type_flg );
 		log_info( " ==> Ignoring extended attributes for inode %llu!", in->inode_id );
 		return;
 	} else {
@@ -186,176 +188,44 @@ static xattr* free_xattr_chain( xattr* root ) {
 }
 
 
-bool is_deleted_inode(uint8_t const* data) {
-	if ( NULL == data ) {
-		log_critical( "%s", "BUG: Called without 'data' pointer!" );
-		return false;
+bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count, uint8_t* padding) {
+	bool     result      = false;
+	uint16_t xattr_size  = 0;
+	uint8_t  xattr_count = 0;
+	uint8_t  xattr_padd  = 0;
+
+	if ( NULL == data )
+		goto finish; // nothing to do
+
+	xattr_size  = get_flip16u( data, 0 ); // The length includes the 4 bytes header
+	if ( (0 == xattr_size) || (xattr_size > data_size) ) {
+		// This is not xattr local data
+		xattr_size = 0;
+		goto finish;
 	}
 
-	// Check magic first
-	if ( memcmp( data, XFS_IN_MAGIC, 2 ) )
-		return false;
+	xattr_count = data[2];
+	xattr_padd  = data[3];
+	result      = true;
 
-	// We need the version first, as some features need version v3
-	uint8_t version = data[4];
+finish:
+	if ( x_size  ) *x_size  = xattr_size;
+	if ( x_count ) *x_count = xattr_count;
+	if ( padding ) *padding = xattr_padd;
 
-	// Now copy what is zeroed/force on deletion (No flip needed, everything is fixed anyway)
-	uint16_t type_mode       = *((uint16_t*)(data +  2)); // <-- (ZEROED on delete)
-	uint8_t  data_fork_type  = *((uint16_t*)(data +  5)); // <-- (FORCED 2 on delete)
-	uint16_t num_links_v1    = *((uint16_t*)(data +  6)); // <-- (ZEROED on delete)
-	uint32_t num_links_v2    = *((uint16_t*)(data + 16)); // <-- (ZEROED on delete)
-	uint64_t file_size       = *((uint16_t*)(data + 56)); // <-- (ZEROED on delete)
-	uint64_t file_blocks     = *((uint16_t*)(data + 64)); // <-- (ZEROED on delete)
-	uint32_t ext_used        = *((uint16_t*)(data + 76)); // <-- (ZEROED on delete)
-	uint8_t  xattr_off       = *((uint16_t*)(data + 82)); // <-- (ZEROED on delete)
-	uint8_t  xattr_type_flg  = *((uint16_t*)(data + 83)); // <-- (FORCED 2 on delete)
-
-	// There are some forced values (see above) on deleted inodes.
-	// These can be used to identify an inode that got deleted.
-	if ( type_mode                           // <-- (ZEROED on delete)
-	  || ( data_fork_type != 2 )             // <-- (FORCED 2 on delete)
-	  || ( ( version < 3 ) && num_links_v1 ) // <-- (ZEROED on delete)
-	  || ( ( version > 2 ) && num_links_v2 ) // <-- (ZEROED on delete)
-	  || file_size                           // <-- (ZEROED on delete)
-	  || file_blocks                         // <-- (ZEROED on delete)
-	  || ext_used                            // <-- (ZEROED on delete)
-	  || xattr_off                           // <-- (ZEROED on delete)
-	  || ( xattr_type_flg != 2 ) )           // <-- (FORCED 2 on delete)
-		// Not a deleted inode, so it is uninteresting for us.
-		return false;
-
-	// Found one
-	return true;
+	return result;
 }
-
-
-typedef enum _recover_part {
-	RP_DATA = 1, //!< Right after the core, extents or the B-Tree root of the data are located
-	RP_GAP,      //!< There is (or might be) a zeroed gap between data and xattr
-	RP_XATTR,    //!< Extended attributes are local or in extents
-	RP_END       //!< xattrs are aligned to the end, but maybe we find strips of zero?
-} e_recover_part;
-
-static int recover_info( xfs_in* in, uint16_t inode_size, uint8_t const* data ) {
-	size_t         start  = in->version > 2 ? DATA_START_V3 : DATA_START_V1;
-	e_recover_part e_part = RP_DATA;
-
-	/* The theory is as follows:
-	 * Most but very fragmented files are stored as ST_ARRAY, thus, in extents
-	 * which are listed right here in the inode.
-	 * Most but very long lists of extended attributes are stored as ST_LOCAL, thus
-	 * right here in the inode.
-	 * We go through the space left after the inode core and see whether we find
-	 * extent information. These can be counted. 16 bytes of zeroes imply the end
-	 * of a 1-n extent list. The next are then either extents to xattrs, or the
-	 * attributes themselves. We try to read both and see whether either makes sense.
-	 */
-	size_t   strips         = ( inode_size - start ) / 16;
-	uint64_t file_size      = 0; // <-- (ZEROED on delete)
-	uint64_t file_blocks    = 0; // <-- (ZEROED on delete)
-	uint32_t ext_used       = 0; // <-- (ZEROED on delete)
-	uint32_t xattr_ext_used = 0;
-
-	for ( size_t i = 0, offset = start       ;
-	                ( RP_END != e_part ) && ( i < strips ) ;
-	                ++i, offset += 16                  ) {
-
-		uint8_t const* strip     = data + offset;
-		bool           is_extent = false;
-
-		// ------------------------------------------------------------
-		// Check 1: If the strip is zeroed, we go forward
-		// ------------------------------------------------------------
-		bool is_zero = true;
-		for ( size_t j = 0; is_zero && ( j < 16 ); ++j ) {
-			if ( data[j] ) is_zero = false;
-		}
-		if ( is_zero ) {
-			if ( RP_XATTR == e_part )
-				e_part = RP_END;
-			if ( RP_DATA == e_part )
-				e_part = RP_GAP;
-			continue;
-		}
-
-		// If we have data, but were in RP_GAP, we are in RP_XATTR now.
-		if ( RP_GAP == e_part ) {
-			e_part = RP_XATTR;
-			in->xattr_off = ( offset - start ) / 8; // At least that one is easy.
-		}
-
-		// ------------------------------------------------------------
-		// Check 2: The start block is inside the device?
-		// ------------------------------------------------------------
-		xfs_ex test_ex;
-		xfs_read_ex( &test_ex, strip );
-		if ( ( test_ex.block + test_ex.length ) < full_disk_blocks )
-			is_extent = true; // Not necessarily the truth, yet, but a hint.
-
-		// ------------------------------------------------------------
-		// Check 3: See whether this might be an XATTR local block
-		// ------------------------------------------------------------
-		if ( RP_XATTR == e_part ) {
-			xattr* xattr_test = unpack_xattr_data( strip, inode_size - offset );
-
-			// xattr local data can have an offset of 8 bytes
-			if ( NULL == xattr_test )
-				xattr_test = unpack_xattr_data( strip + 8, inode_size - offset - 8 );
-
-			// Okay, but now it counts!
-			if ( xattr_test ) {
-				// This is obviously just fine like that.
-				in->xattr_type_flg = ST_LOCAL;
-				in->num_xattr_exts = 0;
-				free_xattr_chain( xattr_test ); // Not needed here.
-				e_part = RP_END; // Finished!
-				continue;
-			}
-			// Okay, so this does not seem to be local data.
-			// If the strip has already been confirmed as an extent, the case is clear
-			if ( is_extent )
-				xattr_ext_used++;
-			continue; // No matter what, we are done here.
-		} // End of checking for XATTR
-
-		// ------------------------------------------------------------
-		// Check 4: If we have a valid text extent and are in ST_DATA,
-		//          we can (almost) safely assume that we know what's what
-		// ------------------------------------------------------------
-		if ( ( RP_DATA == e_part ) && is_extent ) {
-			ext_used++;
-			file_blocks += test_ex.length;
-			file_size   += test_ex.length * sb_block_size;
-			// Note: As we do not account for zero padding, file_size can
-			//       only be assumed to be a maximum file size.
-		}
-	} // End of scanning strips
-	if ( file_blocks && file_size ) {
-		// *yay* !!! Success !!!
-		in->file_blocks    = file_blocks;
-		in->file_size      = file_size;
-		in->ext_used       = ext_used;
-		in->num_xattr_exts = xattr_ext_used;
-		return 0;
-	}
-
-	// *meh*
-	return -1;
-} // end of recover_info()
 
 
 // Returns the root of an unpacked xattr chain, or NULL if no chain was found
 xattr* unpack_xattr_data( uint8_t const* data, size_t data_len ) {
-	if ( NULL == data )
+	uint16_t xattr_size  = 0;
+	uint8_t  xattr_count = 0;
+	uint8_t  xattr_padd  = 0;
+
+	if ( !is_xattr_head(data, data_len, &xattr_size, &xattr_count, &xattr_padd))
 		return NULL; // nothing to do
 
-	uint16_t xattr_size  = get_flip16u( data, 0 ); // The length includes the 4 bytes header
-	if ( ( 0 == xattr_size ) || ( xattr_size > data_len ) )
-		// This is not xattr local data
-		return NULL;
-
-	uint8_t  xattr_count = data[2];
-	uint8_t  xattr_padd  = data[3];
 	size_t   offset      = 4; // Start after header
 	xattr*   curr        = NULL;
 	xattr*   next        = NULL;
@@ -448,6 +318,7 @@ void xfs_free_in( xfs_in** in ) {
 	// shortcut
 	xfs_in* lin = *in; // [l]ocal in
 
+	// Remove data extent list
 	if ( lin->d_ext_root ) {
 		xfs_ex* curr    = lin->d_ext_root;
 		xfs_ex* next    = curr->next;
@@ -460,10 +331,12 @@ void xfs_free_in( xfs_in** in ) {
 		}
 	}
 
+	// Remove local data (Maybe possible in some future XFS version)
 	if ( lin->d_loc_data ) {
 		FREE_PTR( lin->d_loc_data );
 	}
 
+	// Remove xattr extent list
 	if ( lin->x_ext_root ) {
 		xfs_ex* curr    = lin->x_ext_root;
 		xfs_ex* next    = curr->next;
@@ -476,13 +349,14 @@ void xfs_free_in( xfs_in** in ) {
 		}
 	}
 
+	// Remove unpacked local xattr list
 	lin->xattr_root = free_xattr_chain( lin->xattr_root );
 
 	FREE_PTR( *in );
 }
 
 
-int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data ) {
+int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
 	if ( NULL == in ) {
 		log_critical( "%s", "BUG: Called without 'in' pointer!" );
 		return -1;
@@ -498,14 +372,16 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data ) {
 
 	// Copy and check magic first
 	memcpy( in->magic, data, 2 );
-	if ( strncmp( sb->magic, XFS_IN_MAGIC, 2 ) ) {
-		log_critical( "Wrong magic: 0x%02x%02x instead of 0x%02x%02x",
-		              in->magic[0],    in->magic[1], XFS_IN_MAGIC[0], XFS_IN_MAGIC[1] );
+	if ( memcmp( sb->magic, XFS_IN_MAGIC, 2 ) ) {
+		log_error( "Wrong magic: 0x%02x%02x instead of 0x%02x%02x",
+		           in->magic[0],    in->magic[1], XFS_IN_MAGIC[0], XFS_IN_MAGIC[1] );
 		return -1;
 	}
 
-	// As the magic is correct, check whether this is a deleted inode
-	if (!is_deleted_inode(data))
+	// As the magic is correct, check whether this is a deleted inode or a directory
+	in->is_deleted   = is_deleted_inode(data);
+	in->is_directory = is_directory_block(data);
+	if ( !(in->is_deleted || in->is_directory) )
 		// Uninteresting for us
 		return -1;
 
@@ -534,22 +410,26 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data ) {
 	}
 
 	// Now just copy/flip the data for recovery
-	in->type_mode       = 0; // <-- (ZEROED on delete)
-	in->data_fork_type  = 2; // <-- (FORCED 2 on delete)
-	in->num_links_v1    = 0; // <-- (ZEROED on delete)
-	in->num_links_v2    = 0; // <-- (ZEROED on delete)
-	in->file_size       = 0; // <-- (ZEROED on delete)
-	in->file_blocks     = 0; // <-- (ZEROED on delete)
-	in->ext_used        = 0; // <-- (ZEROED on delete)
-	in->num_xattr_exts  = 0; // <-- (ZEROED on delete)
-	in->xattr_off       = 0; // <-- (ZEROED on delete)
-	in->xattr_type_flg  = 2; // <-- (FORCED 2 on delete)
+	in->type_mode       = get_flip16u( data,   2 ); // <-- (ZEROED on delete)
+	in->data_fork_type  = get_flip8u(  data,   5 ); // <-- (FORCED 2 on delete)
+	in->num_links_v1    = get_flip16u( data,   6 ); // <-- (ZEROED on delete)
+	in->num_links_v2    = get_flip32u( data,  16 ); // <-- (ZEROED on delete)
+	in->file_size       = get_flip64u( data,  56 ); // <-- (ZEROED on delete)
+	in->file_blocks     = get_flip64u( data,  64 ); // <-- (ZEROED on delete)
+	in->ext_used        = get_flip32u( data,  76 ); // <-- (ZEROED on delete)
+	in->num_xattr_exts  = get_flip16u( data,  80 ); // <-- (ZEROED on delete)
+	in->xattr_off       = get_flip8u(  data,  82 ); // <-- (ZEROED on delete)
+	in->xattr_type_flg  = get_flip8u(  data,  83 ); // <-- (FORCED 2 on delete)
 
 	// Try to recover data fork type, extents used/B-Tree root
 	// and where the extended attributes start, if they are local.
-	if ( -1 == recover_info( in, sb->inode_size, data ) )
-		// Completely fubar!
-		return -1;
+	if ( in->is_deleted ) {
+		if ( -1 == restore_inode( in, sb->inode_size, data, fd ) )
+			// Completely fubar!
+			return -1;
+	} else
+		// So as this is a directory, note it down
+		in->ftype = FT_DIR;
 
 	// Now read the rest of the inode data
 	in->uid             = get_flip32u( data,   8 );
@@ -570,21 +450,26 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data ) {
 	in->gen_number      = get_flip32u( data,  92 );
 	in->nxt_unlnkd_ptr  = get_flip32u( data,  96 );
 	/* v3 inodes (v5 file system) have the following fields */
-	in->attr_changes    = get_flip64u( data, 104 );
-	in->last_log_seq    = get_flip64u( data, 112 );
-	in->ext_flags       = get_flip64u( data, 120 );
-	in->cow_ext_size    = get_flip32u( data, 128 );
-	in->padding[12]     = get_flip8u(  data, 132 );
-	in->btime_ep        = get_flip32u( data, 144 );
-	in->btime_ns        = get_flip32u( data, 148 );
+	if (in->version > 2) {
+		in->attr_changes    = get_flip64u( data, 104 );
+		in->last_log_seq    = get_flip64u( data, 112 );
+		in->ext_flags       = get_flip64u( data, 120 );
+		in->cow_ext_size    = get_flip32u( data, 128 );
+		memcpy(in->padding, data + 132, 12);
+		in->btime_ep        = get_flip32u( data, 144 );
+		in->btime_ns        = get_flip32u( data, 148 );
+	}
 
-	// Handle file storage (local, extents or btree)
+	// Handle file/directory storage (local, extents or btree)
 	if ( -1 == build_data_map( in, sb->inode_size, data ) )
 		return -1; // Already told what's wrong
 
 	// Handle xattr storage (local, extents or btree)
-	build_xattr_map( in, sb->inode_size, data );
-	// No check here. xattrs aren't that mission critical!
+	if ( NULL == in->xattr_root )
+		// Note: recover_inode() already unpacks xattr local data,
+		//       this here is only for directory nodes.
+		build_xattr_map( in, sb->inode_size, data );
+		// Note 2: No check here. xattrs aren't that mission critical!
 
 	// We here? Fine!
 
