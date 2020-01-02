@@ -20,4 +20,18 @@ extern bool     src_is_ssd;       /// If true, we can read multi-threaded
 extern xfs_sb*  superblocks;      /// All AGs are loaded in here
 extern bool     tgt_is_ssd;       /// If true, we can write multi-threaded
 
+
+// Magic Codes of the different XFS blocks
+uint8_t XFS_DB_MAGIC[4]; //!< Single block long directory block
+uint8_t XFS_DD_MAGIC[4]; //!< Multi block long directory block
+uint8_t XFS_DT_MAGIC[2]; //!< Multi block long directory tail (hash) block
+uint8_t XFS_IN_MAGIC[2]; //!< Inode magic
+uint8_t XFS_SB_MAGIC[4]; //!< Superblock magic
+
+
+// Sizes of the inode cores, aka "where the data starts"
+extern size_t DATA_START_V1;
+extern size_t DATA_START_V3;
+
+
 #endif // PWX_XFS_UNDELETE_SRC_GLOBALS_H_INCLUDED

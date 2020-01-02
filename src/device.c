@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 
-// General global variables
+// General local variables
 static char*     mntDir           = NULL;
 static char*     mntOpts          = NULL;
 static char*     source_device    = NULL;
@@ -49,6 +49,13 @@ xfs_sb*  superblocks      = NULL; //!< All AGs are loaded in here
 // Global disk information
 bool src_is_ssd = false;
 bool tgt_is_ssd = false;
+
+// Magic Codes of the different XFS blocks
+uint8_t XFS_DB_MAGIC[4] = { 0x58, 0x44, 0x42, 0x33 }; // "XDB3" ; Single block long directory block
+uint8_t XFS_DD_MAGIC[4] = { 0x58, 0x44, 0x44, 0x33 }; // "XDD3" ; Multi block long directory block
+uint8_t XFS_DT_MAGIC[2] = { 0x3d, 0xf1};              //          Multi block long directory tail (hash) block
+uint8_t XFS_IN_MAGIC[2] = { 0x49, 0x4e};              // "IN"   ; Inode magic
+uint8_t XFS_SB_MAGIC[4] = { 0x58, 0x46, 0x53, 0x42 }; // "XFSB" ; Superblock magic
 
 
 void free_devices( void ) {
@@ -99,7 +106,7 @@ static int get_ag_base_info() {
 
 	// Now that we are here, get the data!
 	memcpy(  sb_magic, buf,       4 );
-	if ( strncmp( sb_magic, XFS_SB_MAGIC, 4 ) ) {
+	if ( memcmp( sb_magic, XFS_SB_MAGIC, 4 ) ) {
 		log_critical( "Wrong magic: 0x%02x%02x%02x%02x instead of 0x%02x%02x%02x%02x",
 		              sb_magic[0],     sb_magic[1],     sb_magic[2],     sb_magic[3],
 		              XFS_SB_MAGIC[0], XFS_SB_MAGIC[1], XFS_SB_MAGIC[2], XFS_SB_MAGIC[3] );

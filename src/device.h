@@ -3,10 +3,6 @@
 #pragma once
 
 
-#define XFS_IN_MAGIC "IN"
-#define XFS_SB_MAGIC "XFSB"
-
-
 /** @brief restore the source device mount status and free the internal paths
   *
   * If the source device was remounted read-only, try to restore the rw state.
