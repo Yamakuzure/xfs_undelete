@@ -87,9 +87,28 @@ int mkdirs( char const* path );
 #define get_flip64u(_b, _o) flip64( *( ( uint64_t* )( (_b) + (_o) ) ) )
 
 // Just a shortcut to make some pointer manipulations easier
-#define FREE_PTR(p) if (p) { free(p); } p = NULL
+#define FREE_PTR(p) if (p) { free((void*)(p)); } p = NULL
 #define TAKE_PTR(p) (p); p = NULL
 #define RELEASE(p)  (p)->prev = NULL; (p)->next = NULL
+
+// Shortcut to dump a strip of data, hexdump -C style
+// Note: Uses log_debug() so it does nothing on release builds.
+#define DUMP_STRIP(_off, _dat) \
+	log_debug("%08x |"     \
+		  " %02x %02x %02x %02x %02x %02x %02x %02x " \
+		  " %02x %02x %02x %02x %02x %02x %02x %02x " \
+		  "| %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",       \
+		  _off,                                       \
+		  _dat[0], _dat[1], _dat[ 2], _dat[ 3], _dat[ 4], _dat[ 5], _dat[ 6], _dat[ 7], \
+		  _dat[8], _dat[9], _dat[10], _dat[11], _dat[12], _dat[13], _dat[14], _dat[15], \
+		  isprint(_dat[ 0]) ? _dat[ 0] : '.', isprint(_dat[ 1]) ? _dat[ 1] : '.',       \
+		  isprint(_dat[ 2]) ? _dat[ 2] : '.', isprint(_dat[ 3]) ? _dat[ 3] : '.',       \
+		  isprint(_dat[ 4]) ? _dat[ 4] : '.', isprint(_dat[ 5]) ? _dat[ 5] : '.',       \
+		  isprint(_dat[ 6]) ? _dat[ 6] : '.', isprint(_dat[ 7]) ? _dat[ 7] : '.',       \
+		  isprint(_dat[ 8]) ? _dat[ 8] : '.', isprint(_dat[ 9]) ? _dat[ 9] : '.',       \
+		  isprint(_dat[10]) ? _dat[10] : '.', isprint(_dat[11]) ? _dat[11] : '.',       \
+		  isprint(_dat[12]) ? _dat[12] : '.', isprint(_dat[13]) ? _dat[13] : '.',       \
+		  isprint(_dat[14]) ? _dat[14] : '.', isprint(_dat[15]) ? _dat[15] : '.')
 
 
 #endif // PWX_XFS_UNDELETE_SRC_UITLS_H_INCLUDED

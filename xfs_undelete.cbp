@@ -81,6 +81,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/device.h" />
+		<Unit filename="src/file_type.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/file_type.h" />
+		<Unit filename="src/forensics.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/forensics.h" />
 		<Unit filename="src/globals.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -108,6 +116,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/writer.h" />
+		<Unit filename="src/xfs_dir.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/xfs_dir.h" />
 		<Unit filename="src/xfs_ex.c">
 			<Option compilerVar="CC" />
 		</Unit>
