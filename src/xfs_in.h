@@ -106,7 +106,7 @@ typedef struct _xfs_in {
   * @param[out] padding  If not NULL, this value is set to the number of padding bytes
   * @return true if this starts an xattr block, false otherwise
 **/
-bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count, uint8_t* padding);
+bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count, uint8_t* padding );
 
 
 /** @brief Unpack xattr data and create an xattr chain from the findings

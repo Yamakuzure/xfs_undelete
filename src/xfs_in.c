@@ -307,10 +307,7 @@ xattr* unpack_xattr_data( uint8_t const* data, size_t data_len ) {
 
 
 void xfs_free_in( xfs_in** in ) {
-	if ( NULL == in ) {
-		log_critical( "%s", "BUG: Called without 'in' pointer!" );
-		return;
-	}
+	RETURN_VOID_IF_NULL( in );
 	if ( NULL == *in )
 		// Simply nothing to do
 		return;
@@ -357,18 +354,9 @@ void xfs_free_in( xfs_in** in ) {
 
 
 int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
-	if ( NULL == in ) {
-		log_critical( "%s", "BUG: Called without 'in' pointer!" );
-		return -1;
-	}
-	if ( NULL == sb ) {
-		log_critical( "%s", "BUG: Called without 'sb' pointer!" );
-		return -1;
-	}
-	if ( NULL == data ) {
-		log_critical( "%s", "BUG: Called without 'data' pointer!" );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( in );
+	RETURN_INT_IF_NULL( sb );
+	RETURN_INT_IF_NULL( data );
 
 	// Copy and check magic first
 	memcpy( in->magic, data, 2 );
@@ -379,8 +367,8 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
 	}
 
 	// As the magic is correct, check whether this is a deleted inode or a directory
-	in->is_deleted   = is_deleted_inode(data);
-	in->is_directory = is_directory_block(data);
+	in->is_deleted   = is_deleted_inode( data )   > 0 ? true : false;
+	in->is_directory = is_directory_block(data) > 0 ? true : false;
 	if ( !(in->is_deleted || in->is_directory) )
 		// Uninteresting for us
 		return -1;
