@@ -68,7 +68,7 @@ void free_devices( void ) {
 			} else
 				log_info( "Mount options on %s restored!", source_device );
 		}
-		FREE_PTR(source_device);
+		FREE_PTR( source_device );
 	}
 	FREE_PTR( mntDir );
 	FREE_PTR( mntOpts );
@@ -134,10 +134,12 @@ static int get_ag_base_info() {
 }
 
 int scan_superblocks() {
+#if defined(PWX_DEBUG)
 	if ( NULL == source_device ) {
-		log_critical( "BUG! %s called before calling set_device()!", __func__ );
+		log_critical( "%s", "BUG! Call set_device() FIRST!" );
 		return -1;
 	}
+#endif // debug
 
 	// First we need to find out how many allocation Groups (AG) there are and where to find them.
 	if ( -1 == get_ag_base_info() )
@@ -174,7 +176,7 @@ int scan_superblocks() {
 
 
 /// @brief little helper, because we need this twice.
-int is_device_ssd(bool* tgt, char const* dev) {
+int is_device_ssd( bool* tgt, char const* dev ) {
 	char        disk_part[6] = { 0x0 };
 	char const* cur_p        = strrchr( dev, '/' );
 
@@ -216,12 +218,9 @@ int set_source_device( char const* device_path ) {
 	if ( source_device )
 		free_devices();
 
-	if ( device_path )
-		source_device = strdup( device_path );
-	else {
-		log_critical( "%s", "BUG! Called without device_path!" );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( device_path );
+
+	source_device = strdup( device_path );
 
 
 	/* === See where the device is mounted ===
@@ -265,7 +264,7 @@ int set_source_device( char const* device_path ) {
 	 */
 	if ( -1 == is_device_ssd( &src_is_ssd, source_device ) ) {
 		log_error( "Can not determine whether %s is rotational", source_device );
-		log_warning(" Assuming %s is a spinning disk and going to read single-threaded.", source_device );
+		log_warning( " Assuming %s is a spinning disk and going to read single-threaded.", source_device );
 		src_is_ssd = false;
 	} else if ( src_is_ssd )
 		log_info( "%s seems to be an SSD -> Reading multi-threaded!", source_device );
@@ -280,17 +279,14 @@ int set_target_path( char const* dir_path ) {
 	if ( target_path )
 		free_devices();
 
-	if ( dir_path )
-		target_path = strdup( dir_path );
-	else {
-		log_critical( "%s", "BUG! Called without dir_path!" );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( dir_path );
+
+	target_path = strdup( dir_path );
 
 	/* === Create the target path if needed ===
 	 * ========================================
 	 */
-	if (mkdirs( target_path ))
+	if ( mkdirs( target_path ) )
 		return -1;
 
 	/* === See on which device the target directory is mounted ===
@@ -299,7 +295,7 @@ int set_target_path( char const* dir_path ) {
 	char  full_path[PATH_MAX] = { 0x0 };
 	char* target_device       = NULL;
 	if ( NULL == realpath( target_path, full_path ) ) {
-		log_critical("Unable to resolve %s into a real path!", target_path);
+		log_critical( "Unable to resolve %s into a real path!", target_path );
 		return -1;
 	}
 
@@ -313,7 +309,7 @@ int set_target_path( char const* dir_path ) {
 	while ( NULL != ( ent = getmntent( entFile ) ) ) {
 		if ( full_path == strstr( full_path, ent->mnt_dir ) ) {
 			// Note: This means that 'full_path' begins with 'ent->mnt_dir'
-			if (target_device && ( strlen(ent->mnt_fsname) > strlen(target_device) ) ) {
+			if ( target_device && ( strlen( ent->mnt_fsname ) > strlen( target_device ) ) ) {
 				FREE_PTR( target_device );
 			}
 			// Note: This re-assignment solves problems with sub-mounts
@@ -334,7 +330,7 @@ int set_target_path( char const* dir_path ) {
 	 */
 	if ( -1 == is_device_ssd( &tgt_is_ssd, target_device ) ) {
 		log_error( "Can not determine whether %s is rotational", target_device );
-		log_warning(" Assuming %s is a spinning disk and going to read single-threaded.", target_device );
+		log_warning( " Assuming %s is a spinning disk and going to read single-threaded.", target_device );
 		tgt_is_ssd = false;
 	} else if ( tgt_is_ssd )
 		log_info( "%s seems to be an SSD -> Writing multi-threaded!", target_device );
