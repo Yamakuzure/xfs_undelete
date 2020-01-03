@@ -7,7 +7,7 @@
 #include "file_type.h"
 
 
-e_file_type get_file_type(uint8_t ftype_num) {
+e_file_type get_file_type( uint8_t ftype_num ) {
 	switch( ftype_num ) {
 		case FT_FIFO:
 			return FT_FIFO;

@@ -34,7 +34,7 @@ static in_queue_t* in_tail = NULL;
 
 /// @brief internal in_queue_t creator. Returns -1 on calloc failure.
 static int create_in_elem( in_queue_t** elem, xfs_in* in ) {
-	in_queue_t* new_elem = calloc(1, sizeof(struct _in_queue));
+	in_queue_t* new_elem = calloc( 1, sizeof( struct _in_queue ) );
 
 	if ( new_elem ) {
 		new_elem->in = in;
@@ -42,39 +42,41 @@ static int create_in_elem( in_queue_t** elem, xfs_in* in ) {
 		return 0;
 	}
 
-	log_critical("Unable to allocate %zu bytes for in_queue_t element!", sizeof(struct _in_queue));
+	log_critical( "Unable to allocate %zu bytes for in_queue_t element!", sizeof( struct _in_queue ) );
 	return -1;
 }
 
 
-xfs_in* in_pop(void) {
+xfs_in* in_pop( void ) {
 	in_queue_t* elem   = NULL;
 	xfs_in*     result = NULL;
 
 	mtx_lock( &queue_lock );
-	if ( in_tail ) {
-		elem    = in_tail;
-		in_tail = elem->prev;
-		if ( NULL == in_tail )
+	if ( in_head ) {
+		elem  = in_head;
+		in_head = elem->next;
+		if ( NULL == in_head )
 			// Was last element
-			in_head = NULL;
+			in_tail = NULL;
 	}
 	mtx_unlock( &queue_lock );
 
 	if ( elem ) {
-		result = TAKE_PTR(elem->in);
-		RELEASE(elem);
-		free(elem);
+		result = TAKE_PTR( elem->in );
+		RELEASE( elem );
+		FREE_PTR( elem );
 	}
 
 	return result;
 }
 
 
-int in_push(xfs_in* in) {
+int in_push( xfs_in* in ) {
+	RETURN_INT_IF_NULL( in );
+
 	in_queue_t* elem = NULL;
 
-	if ( -1 == create_in_elem( &elem, in ))
+	if ( -1 == create_in_elem( &elem, in ) )
 		return -1;
 
 	mtx_lock( &queue_lock );
@@ -93,34 +95,36 @@ int in_push(xfs_in* in) {
 }
 
 
-xfs_in* in_shift(void) {
+xfs_in* in_shift( void ) {
 	in_queue_t* elem   = NULL;
 	xfs_in*     result = NULL;
 
 	mtx_lock( &queue_lock );
-	if ( in_head ) {
-		elem  = in_head;
-		in_head = elem->next;
-		if ( NULL == in_head )
+	if ( in_tail ) {
+		elem    = in_tail;
+		in_tail = elem->prev;
+		if ( NULL == in_tail )
 			// Was last element
-			in_tail = NULL;
+			in_head = NULL;
 	}
 	mtx_unlock( &queue_lock );
 
 	if ( elem ) {
-		result = TAKE_PTR(elem->in);
-		RELEASE(elem);
-		free(elem);
+		result = TAKE_PTR( elem->in );
+		RELEASE( elem );
+		FREE_PTR( elem );
 	}
 
 	return result;
 }
 
 
-int in_unshift(xfs_in* in) {
+int in_unshift( xfs_in* in ) {
+	RETURN_INT_IF_NULL( in );
+
 	in_queue_t* elem = NULL;
 
-	if ( -1 == create_in_elem( &elem, in ))
+	if ( -1 == create_in_elem( &elem, in ) )
 		return -1;
 
 	mtx_lock( &queue_lock );
