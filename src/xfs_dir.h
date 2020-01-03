@@ -55,7 +55,7 @@ typedef struct _xfs_entry {
   *
   * @param[in,out] entry  Pointer to the entry to free
 **/
-xfs_entry_t* xfs_free_entry(xfs_entry_t* entry);
+xfs_entry_t* xfs_free_entry( xfs_entry_t* entry );
 
 
 /** @brief interpret @a data as a short form packed directory header
@@ -64,7 +64,7 @@ xfs_entry_t* xfs_free_entry(xfs_entry_t* entry);
   * @param[in] data  The data to unpack
   * @return 0 on success, -1 on failure.
 **/
-int xfs_init_packed_dir(xfs_dir_t* dir, uint8_t const* data);
+int xfs_init_packed_dir( xfs_dir_t* dir, uint8_t const* data );
 
 
 /** @brief interpret @a data as a short form packed directory entry.
@@ -74,6 +74,6 @@ int xfs_init_packed_dir(xfs_dir_t* dir, uint8_t const* data);
   * @param[in] data  The data to unpack
   * @return 0 on success, -1 on failure.
 **/
-int xfs_read_packed_dir_entry(xfs_entry_t* entry, xfs_dir_t* dir, uint8_t const* data);
+int xfs_read_packed_dir_entry( xfs_entry_t* entry, xfs_dir_t* dir, uint8_t const* data );
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_DIR_H_INCLUDED
