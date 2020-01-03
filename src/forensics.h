@@ -6,9 +6,8 @@
 #include "xfs_in.h"
 
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 /** @brief Check whether @a data points to a deleted inode
@@ -16,7 +15,7 @@
   * @param[in] data  pointer to the data (minimum 84 bytes!)
   * @return true if this is a deleted inode, false if it is anything else
 **/
-bool is_deleted_inode(uint8_t const* data);
+int is_deleted_inode(uint8_t const* data);
 
 
 /** @brief Check whether @a data points to a directory block (or inode)
@@ -24,7 +23,7 @@ bool is_deleted_inode(uint8_t const* data);
   * @param[in] data  pointer to the data (minimum 4 bytes!)
   * @return true if this is a directory block or inode, false if it is anything else
 **/
-bool is_directory_block(uint8_t const* data);
+int is_directory_block(uint8_t const* data);
 
 
 /** @brief Try to recover information about an deleted inode
