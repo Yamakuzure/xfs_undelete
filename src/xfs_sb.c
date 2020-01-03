@@ -18,10 +18,7 @@
 
 
 int xfs_read_sb( xfs_sb* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t bs ) {
-	if ( NULL == sb ) {
-		log_critical( "%s", "BUG! Called with NULL sb!" );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( sb );
 
 	uint8_t buf[271] = { 0x0 };
 	int     res      = 0;
