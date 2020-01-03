@@ -1,5 +1,5 @@
-#ifndef PWX_XFS_UNDELETE_SRC_SCANNER_H_INCLUDED
-#define PWX_XFS_UNDELETE_SRC_SCANNER_H_INCLUDED 1
+#ifndef PWX_XFS_UNDELETE_SRC_WRITER_H_INCLUDED
+#define PWX_XFS_UNDELETE_SRC_WRITER_H_INCLUDED 1
 #pragma once
 
 
@@ -18,23 +18,11 @@ typedef struct _write_data {
 	_Atomic( bool )     do_stop;   //!< Initialized with false, set to true when the thread shall break off
 	_Atomic( bool )     is_finished; //!< Initialized with false, set to true when the thread is finished.
 	xfs_sb*             sb_data;     //!< The Superblock data this thread shall handle
-	_Atomic( uint64_t ) sec_scanned; //!< Increased by the thread, questioned by main
 	mtx_t               sleep_lock;  //!< Used for conditional sleeping until signaled
 	uint32_t            thread_num;  //!< Number of the thread for logging
 	_Atomic( uint64_t ) undeleted; //!< Increased by the thread, questioned by main
 	cnd_t               wakeup_call; //!< Used by the main thread to signal the thread to continue
 } write_data_t;
-
-
-/** @brief Initialize a write_data_t structure with xfs_sb and ag number
-  * @param[out] write_data  Pointer to the write_data_t instance to initialize
-  * @param[in] thrd_num Number of the thread this structure is meant for
-  * @param[in] dev_str  Pointer to the device string
-  * @param[in] sb_data  Pointer to the xfs_sb instance to use
-  * @param[in] ag_num  Number of the allocation group the superblock describes
-  * @return 0 on success, -1 on failure
-**/
-int init_write_data( write_data_t* write_data, uint32_t thrd_num, char const* dev_str, xfs_sb* sb_data, uint32_t ag_num );
 
 
 /** @brief Main writer function
@@ -44,4 +32,19 @@ int init_write_data( write_data_t* write_data, uint32_t thrd_num, char const* de
 int writer( void* write_data );
 
 
-#endif // PWX_XFS_UNDELETE_SRC_SCANNER_H_INCLUDED
+/** @brief Create and initialize the write_data_t structure array
+  * @param[in] ar_size  Size of the array to create
+  * @param[in] dev_str  Pointer to the device string
+  * @return Pointer to the created and initialized array, NULL on error
+**/
+write_data_t* create_writer_data( uint32_t ar_size, char const* dev_str );
+
+
+/** @brief free writer data
+  * @param[in,out] data  Pointer to the write_data_t array to free
+  * @param[in] ar_size  Size of the array
+**/
+void free_writer_data( write_data_t** data );
+
+
+#endif // PWX_XFS_UNDELETE_SRC_WRITER_H_INCLUDED
