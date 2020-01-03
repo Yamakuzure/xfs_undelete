@@ -108,6 +108,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/scanner.h" />
+		<Unit filename="src/thrd_ctrl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/thrd_ctrl.h" />
 		<Unit filename="src/utils.c">
 			<Option compilerVar="CC" />
 		</Unit>

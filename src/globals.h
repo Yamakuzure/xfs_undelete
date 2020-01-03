@@ -3,6 +3,9 @@
 #pragma once
 
 
+#include "analyzer.h"
+#include "scanner.h"
+#include "writer.h"
 #include "xfs_sb.h"
 
 
@@ -11,15 +14,22 @@
 #include <stdlib.h>
 
 
-extern size_t   full_ag_bytes;    /// sb_ag_size * sb_block_size
-extern size_t   full_disk_blocks; /// fsb_ag_count * sb_ag_size
-extern size_t   full_disk_size;   /// full_disk_blocks * sb_block_size
-extern uint32_t sb_ag_count;      /// Number of allocation groups
-extern uint32_t sb_block_size;    /// Size of the file system sectors
-extern bool     src_is_ssd;       /// If true, we can read multi-threaded
-extern xfs_sb*  superblocks;      /// All AGs are loaded in here
-extern bool     tgt_is_ssd;       /// If true, we can write multi-threaded
+extern size_t   full_ag_bytes;    //!< sb_ag_size * sb_block_size
+extern size_t   full_disk_blocks; //!< fsb_ag_count * sb_ag_size
+extern size_t   full_disk_size;   //!< full_disk_blocks * sb_block_size
+extern uint32_t sb_ag_count;      //!< Number of allocation groups
+extern uint32_t sb_block_size;    //!< Size of the file system sectors
+extern bool     src_is_ssd;       //!< If true, we can read multi-threaded
+extern xfs_sb*  superblocks;      //!< All AGs are loaded in here
+extern bool     tgt_is_ssd;       //!< If true, we can write multi-threaded
 
+// Progress and thread control values
+extern uint32_t        ag_scanned;  //!< Every joined scanner thread raises this by one (defined in thrd_ctrl.c)
+extern analyze_data_t* analyze_data;
+extern uint32_t        max_read_threads;
+extern uint32_t        max_write_threads;
+extern scan_data_t*    scan_data;
+extern write_data_t*   write_data;
 
 // Magic Codes of the different XFS blocks
 uint8_t XFS_DB_MAGIC[4]; //!< Single block long directory block
