@@ -27,22 +27,26 @@ typedef struct _scan_data {
 } scan_data_t;
 
 
-/** @brief Initialize a scan_data_t structure with xfs_sb and ag number
-  * @param[out] scan_data  Pointer to the scan_data_t instance to initialize
-  * @param[in] thrd_num Number of the thread this structure is meant for
-  * @param[in] dev_str  Pointer to the device string
-  * @param[in] sb_data  Pointer to the xfs_sb instance to use
-  * @param[in] ag_num  Number of the allocation group the superblock describes
-  * @return 0 on success, -1 on failure
-**/
-int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str, xfs_sb* sb_data, uint32_t ag_num );
-
-
 /** @brief Main scan function
   * @param[in] scan_data  Pointer to the scan_data_t instance this thread handles.
   * @return 0 on success, non-zero otherwise.
 **/
 int scanner( void* scan_data );
+
+
+/** @brief Create and initialize the scan_data_t structure array
+  * @param[in] ar_size  Size of the array to create
+  * @param[in] dev_str  Pointer to the device string
+  * @return Pointer to the created and initialized array, NULL on error
+**/
+scan_data_t* create_scanner_data( uint32_t ar_size, char const* dev_str );
+
+
+/** @brief free scanner data
+  * @param[in,out] data  Pointer to the scan_data_t array to free
+  * @param[in] ar_size  Size of the array
+**/
+void free_scanner_data( scan_data_t** data );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_SCANNER_H_INCLUDED

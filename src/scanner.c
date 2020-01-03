@@ -8,6 +8,7 @@
 #include "inode_queue.h"
 #include "log.h"
 #include "scanner.h"
+#include "utils.h"
 
 
 #include <errno.h>
@@ -16,7 +17,8 @@
 #include <unistd.h>
 
 
-int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str, xfs_sb* sb_data, uint32_t ag_num ) {
+static int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str,
+                           xfs_sb* sb_data, uint32_t ag_num ) {
 	if ( NULL == scan_data ) {
 		log_critical( "%s", "Bug! Called with NULL scan_data!" );
 		return -1;
@@ -100,3 +102,41 @@ cleanup:
 }
 
 
+scan_data_t* create_scanner_data( uint32_t ar_size, char const* dev_str ) {
+	if ( 0 == ar_size ) {
+		log_critical("%s", "BUG! Called with zero array size!");
+		return NULL;
+	}
+	if ( NULL == dev_str ) {
+		log_critical("%s", "BUG! Called with NULL device string!");
+		return NULL;
+	}
+
+	scan_data_t* data = (scan_data_t*)calloc( ar_size, sizeof(scan_data_t) );
+	if ( NULL == data ) {
+		log_critical( "Unable to allocate %zu bytes for scannerr data array! %m [%d]",
+		              sizeof(scan_data_t) * ar_size, errno );
+		return NULL;
+	}
+
+	int res = 0;
+
+	for ( uint32_t i = 0; (0 == res) && (i < ar_size); ++i ) {
+		res = init_scan_data( &data[i], i, dev_str, &superblocks[i], i );
+	}
+
+	if ( -1 == res )
+		free_scanner_data( &data );
+
+	return data;
+}
+
+
+void free_scanner_data( scan_data_t** data ) {
+	if ( NULL == data ) {
+		log_critical("%s", "BUG! Called with NULL data!");
+		return;
+	}
+
+	FREE_PTR(*data);
+}
