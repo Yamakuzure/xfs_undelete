@@ -25,13 +25,6 @@ typedef struct _write_data {
 } write_data_t;
 
 
-/** @brief Main writer function
-  * @param[in] write_data  Pointer to the write_data_t instance this thread handles.
-  * @return 0 on success, non-zero otherwise.
-**/
-int writer( void* write_data );
-
-
 /** @brief Create and initialize the write_data_t structure array
   * @param[in] ar_size  Size of the array to create
   * @param[in] dev_str  Pointer to the device string
@@ -45,6 +38,13 @@ write_data_t* create_writer_data( uint32_t ar_size, char const* dev_str );
   * @param[in] ar_size  Size of the array
 **/
 void free_writer_data( write_data_t** data );
+
+
+/** @brief Main writer function
+  * @param[in] write_data  Pointer to the write_data_t instance this thread handles.
+  * @return 0 on success, non-zero otherwise.
+**/
+int writer( void* write_data );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_WRITER_H_INCLUDED

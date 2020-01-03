@@ -17,18 +17,9 @@
 
 static int init_write_data( write_data_t* write_data, uint32_t thrd_num, char const* dev_str,
                             xfs_sb* sb_data, uint32_t ag_num ) {
-	if ( NULL == write_data ) {
-		log_critical( "%s", "Bug! Called with NULL write_data!" );
-		return -1;
-	}
-	if ( NULL == sb_data ) {
-		log_critical( "%s", "Bug! Called with NULL sb_data!" );
-		return -1;
-	}
-	if ( sb_ag_count <= ag_num ) {
-		log_critical( "Bug! Called with ag_num %lu/%lu!", ag_num, sb_ag_count );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( write_data );
+	RETURN_INT_IF_NULL( sb_data );
+	RETURN_INT_IF_VLEV( sb_ag_count, ag_num );
 
 	write_data->ag_num      = ag_num;
 	write_data->device      = dev_str;
@@ -43,12 +34,38 @@ static int init_write_data( write_data_t* write_data, uint32_t thrd_num, char co
 }
 
 
-int writer( void* write_data ) {
-	if ( NULL == write_data ) {
-		log_critical( "%s", "Bug! Called with NULL write_data!" );
-		return -1;
+write_data_t* create_writer_data( uint32_t ar_size, char const* dev_str ) {
+	RETURN_NULL_IF_ZERO( ar_size );
+	RETURN_NULL_IF_NULL( dev_str );
+
+	write_data_t* data = (write_data_t*)calloc( ar_size, sizeof(write_data_t) );
+	if ( NULL == data ) {
+		log_critical( "Unable to allocate %zu bytes for writerr data array! %m [%d]",
+		              sizeof(write_data_t) * ar_size, errno );
+		return NULL;
 	}
 
+	int res = 0;
+
+	for ( uint32_t i = 0; (0 == res) && (i < ar_size); ++i ) {
+		res = init_write_data( &data[i], (2 * sb_ag_count) + i, dev_str, &superblocks[i], i );
+	}
+
+	if ( -1 == res )
+		free_writer_data( &data );
+
+	return data;
+}
+
+
+void free_writer_data( write_data_t** data ) {
+	RETURN_VOID_IF_NULL( data );
+	FREE_PTR(*data);
+}
+
+
+int writer( void* write_data ) {
+	RETURN_INT_IF_NULL( write_data );
 
 	uint8_t*     buf  = NULL;
 	write_data_t* data = ( write_data_t* )write_data;
@@ -95,44 +112,5 @@ cleanup:
 	data->is_finished = true;
 
 	return res;
-}
-
-write_data_t* create_writer_data( uint32_t ar_size, char const* dev_str ) {
-	if ( 0 == ar_size ) {
-		log_critical("%s", "BUG! Called with zero array size!");
-		return NULL;
-	}
-	if ( NULL == dev_str ) {
-		log_critical("%s", "BUG! Called with NULL device string!");
-		return NULL;
-	}
-
-	write_data_t* data = (write_data_t*)calloc( ar_size, sizeof(write_data_t) );
-	if ( NULL == data ) {
-		log_critical( "Unable to allocate %zu bytes for writerr data array! %m [%d]",
-		              sizeof(write_data_t) * ar_size, errno );
-		return NULL;
-	}
-
-	int res = 0;
-
-	for ( uint32_t i = 0; (0 == res) && (i < ar_size); ++i ) {
-		res = init_write_data( &data[i], i, dev_str, &superblocks[i], i );
-	}
-
-	if ( -1 == res )
-		free_writer_data( &data );
-
-	return data;
-}
-
-
-void free_writer_data( write_data_t** data ) {
-	if ( NULL == data ) {
-		log_critical("%s", "BUG! Called with NULL data!");
-		return;
-	}
-
-	FREE_PTR(*data);
 }
 
