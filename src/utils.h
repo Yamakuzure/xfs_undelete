@@ -59,25 +59,25 @@ char const* location_info( char const* path, size_t line, char const* func );
 int mkdirs( char const* path );
 
 
-#define flip16(x)                  \
-	( ( ( (x) & 0x00ff ) << 8) \
-	| ( ( (x) & 0xff00 ) >> 8) )
+#define flip16(x) (                \
+	( ( (x) & 0x00ff ) << 8) | \
+	( ( (x) & 0xff00 ) >> 8) )
 
-#define flip32(x)                       \
-	( ( ( (x) & 0x000000ff ) << 24) \
-	| ( ( (x) & 0x0000ff00 ) <<  8) \
-	| ( ( (x) & 0x00ff0000 ) >>  8) \
-	| ( ( (x) & 0xff000000 ) >> 24) )
+#define flip32(x) (                     \
+	( ( (x) & 0x000000ff ) << 24) | \
+	( ( (x) & 0x0000ff00 ) <<  8) | \
+	( ( (x) & 0x00ff0000 ) >>  8) | \
+	( ( (x) & 0xff000000 ) >> 24) )
 
-#define flip64(x)                               \
-	( ( ( (x) & 0x00000000000000ff ) << 56) \
-	| ( ( (x) & 0x000000000000ff00 ) << 40) \
-	| ( ( (x) & 0x0000000000ff0000 ) << 24) \
-	| ( ( (x) & 0x00000000ff000000 ) <<  8) \
-	| ( ( (x) & 0x000000ff00000000 ) >>  8) \
-	| ( ( (x) & 0x0000ff0000000000 ) >> 24) \
-	| ( ( (x) & 0x00ff000000000000 ) >> 40) \
-	| ( ( (x) & 0xff00000000000000 ) >> 56) )
+#define flip64(x) (                             \
+	( ( (x) & 0x00000000000000ff ) << 56) | \
+	( ( (x) & 0x000000000000ff00 ) << 40) | \
+	( ( (x) & 0x0000000000ff0000 ) << 24) | \
+	( ( (x) & 0x00000000ff000000 ) <<  8) | \
+	( ( (x) & 0x000000ff00000000 ) >>  8) | \
+	( ( (x) & 0x0000ff0000000000 ) >> 24) | \
+	( ( (x) & 0x00ff000000000000 ) >> 40) | \
+	( ( (x) & 0xff00000000000000 ) >> 56) )
 
 // Some helpful wrappers for getting flipped data:
 #define get_flip8u( _b, _o) (_b)[(_o)]
@@ -95,20 +95,51 @@ int mkdirs( char const* path );
 // Note: Uses log_debug() so it does nothing on release builds.
 #define DUMP_STRIP(_off, _dat) \
 	log_debug("%08x |"     \
-		  " %02x %02x %02x %02x %02x %02x %02x %02x " \
-		  " %02x %02x %02x %02x %02x %02x %02x %02x " \
-		  "| %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",       \
-		  _off,                                       \
-		  _dat[0], _dat[1], _dat[ 2], _dat[ 3], _dat[ 4], _dat[ 5], _dat[ 6], _dat[ 7], \
-		  _dat[8], _dat[9], _dat[10], _dat[11], _dat[12], _dat[13], _dat[14], _dat[15], \
-		  isprint(_dat[ 0]) ? _dat[ 0] : '.', isprint(_dat[ 1]) ? _dat[ 1] : '.',       \
-		  isprint(_dat[ 2]) ? _dat[ 2] : '.', isprint(_dat[ 3]) ? _dat[ 3] : '.',       \
-		  isprint(_dat[ 4]) ? _dat[ 4] : '.', isprint(_dat[ 5]) ? _dat[ 5] : '.',       \
-		  isprint(_dat[ 6]) ? _dat[ 6] : '.', isprint(_dat[ 7]) ? _dat[ 7] : '.',       \
-		  isprint(_dat[ 8]) ? _dat[ 8] : '.', isprint(_dat[ 9]) ? _dat[ 9] : '.',       \
-		  isprint(_dat[10]) ? _dat[10] : '.', isprint(_dat[11]) ? _dat[11] : '.',       \
-		  isprint(_dat[12]) ? _dat[12] : '.', isprint(_dat[13]) ? _dat[13] : '.',       \
-		  isprint(_dat[14]) ? _dat[14] : '.', isprint(_dat[15]) ? _dat[15] : '.')
+	          " %02x %02x %02x %02x %02x %02x %02x %02x " \
+	          " %02x %02x %02x %02x %02x %02x %02x %02x " \
+	          "| %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",       \
+	          _off,                                       \
+	          _dat[0], _dat[1], _dat[ 2], _dat[ 3], _dat[ 4], _dat[ 5], _dat[ 6], _dat[ 7], \
+	          _dat[8], _dat[9], _dat[10], _dat[11], _dat[12], _dat[13], _dat[14], _dat[15], \
+	          isprint(_dat[ 0]) ? _dat[ 0] : '.', isprint(_dat[ 1]) ? _dat[ 1] : '.',       \
+	          isprint(_dat[ 2]) ? _dat[ 2] : '.', isprint(_dat[ 3]) ? _dat[ 3] : '.',       \
+	          isprint(_dat[ 4]) ? _dat[ 4] : '.', isprint(_dat[ 5]) ? _dat[ 5] : '.',       \
+	          isprint(_dat[ 6]) ? _dat[ 6] : '.', isprint(_dat[ 7]) ? _dat[ 7] : '.',       \
+	          isprint(_dat[ 8]) ? _dat[ 8] : '.', isprint(_dat[ 9]) ? _dat[ 9] : '.',       \
+	          isprint(_dat[10]) ? _dat[10] : '.', isprint(_dat[11]) ? _dat[11] : '.',       \
+	          isprint(_dat[12]) ? _dat[12] : '.', isprint(_dat[13]) ? _dat[13] : '.',       \
+	          isprint(_dat[14]) ? _dat[14] : '.', isprint(_dat[15]) ? _dat[15] : '.')
+
+// Shortcut to check for a buggy call to a function.
+#if defined(PWX_DEBUG)
+#  define RETURN_INT_IF_NULL(_val) \
+	if ( NULL == (_val) ) { log_critical( "BUG! Called with NULL %s!", #_val ); \
+		return -1; }
+#  define RETURN_INT_IF_VLEV(_l_v, _r_v) \
+	if ( (_l_v) <= (_r_v) ) { \
+		log_critical( "BUG! Called with %s >= %s (%lu/%lu)!", \
+		              #_r_v, #_l_v, _r_v, _l_v ); \
+		return -1; }
+#  define RETURN_NULL_IF_NULL(_val) \
+	if ( NULL == (_val) ) { log_critical( "BUG! Called with NULL %s!", #_val ); \
+		return NULL; }
+#  define RETURN_NULL_IF_ZERO(_val) \
+	if ( 0 == (_val) ) { log_critical( "BUG! Called with zero %s!", #_val ); \
+		return NULL; }
+#  define RETURN_VOID_IF_NULL(_val) \
+	if ( NULL == (_val) ) { log_critical( "BUG! Called with NULL %s!", #_val ); \
+		return; }
+#  define RETURN_ZERO_IF_NULL(_val) \
+	if ( NULL == (_val) ) { log_critical( "BUG! Called with NULL %s!", #_val ); \
+		return 0; }
+#else
+#  define RETURN_INT_IF_NULL(_val) while(0){}
+#  define RETURN_INT_IF_VLEV(_l_v, _r_v) while(0){}
+#  define RETURN_NULL_IF_NULL(_val) while(0){}
+#  define RETURN_NULL_IF_ZERO(_val) while(0){}
+#  define RETURN_VOID_IF_NULL(_val) while(0){}
+#  define RETURN_ZERO_IF_NULL(_val) while(0){}
+#endif // debug
 
 
 #endif // PWX_XFS_UNDELETE_SRC_UITLS_H_INCLUDED

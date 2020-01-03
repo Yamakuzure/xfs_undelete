@@ -17,10 +17,7 @@
 
 
 int exists( char* path, int type ) {
-	if ( NULL == path ) {
-		log_critical( "%s", "BUG: Called without a path!" );
-		return 0;
-	}
+	RETURN_ZERO_IF_NULL ( path );
 
 	struct stat buf;
 
@@ -40,14 +37,8 @@ int exists( char* path, int type ) {
 
 
 void format_uuid_str( char* str, uint8_t const* uuid ) {
-	if ( NULL == str ) {
-		log_critical( "%s", "BUG: Called with NULL 'str'!" );
-		return;
-	}
-	if ( NULL == uuid ) {
-		log_critical( "%s", "BUG: Called with NULL 'uuid'!" );
-		return;
-	}
+	RETURN_VOID_IF_NULL( str );
+	RETURN_VOID_IF_NULL( uuid );
 
 	snprintf( str, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
 	          uuid[ 0], uuid[ 1], uuid[ 2], uuid[ 3],
@@ -90,10 +81,7 @@ char const* location_info( char const* path, size_t line, char const* func ) {
 
 
 int mkdirs ( char const* path ) {
-	if ( NULL == path ) {
-		log_critical( "%s", "BUG: Called without a path!" );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( path );
 
 	static char buffer[PATH_MAX + 1]     = { 0x0 };
 	static char check_path[PATH_MAX + 1] = { 0x0 };
