@@ -19,18 +19,9 @@
 
 static int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const* dev_str,
                            xfs_sb* sb_data, uint32_t ag_num ) {
-	if ( NULL == scan_data ) {
-		log_critical( "%s", "Bug! Called with NULL scan_data!" );
-		return -1;
-	}
-	if ( NULL == sb_data ) {
-		log_critical( "%s", "Bug! Called with NULL sb_data!" );
-		return -1;
-	}
-	if ( sb_ag_count <= ag_num ) {
-		log_critical( "Bug! Called with ag_num %lu/%lu!", ag_num, sb_ag_count );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( scan_data );
+	RETURN_INT_IF_NULL( sb_data );
+	RETURN_INT_IF_VLEV( sb_ag_count, ag_num );
 
 	scan_data->ag_num       = ag_num;
 	scan_data->device       = dev_str;
@@ -47,12 +38,38 @@ static int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const
 }
 
 
-int scanner( void* scan_data ) {
-	if ( NULL == scan_data ) {
-		log_critical( "%s", "Bug! Called with NULL scan_data!" );
-		return -1;
+scan_data_t* create_scanner_data( uint32_t ar_size, char const* dev_str ) {
+	RETURN_NULL_IF_ZERO( ar_size );
+	RETURN_NULL_IF_NULL( dev_str );
+
+	scan_data_t* data = ( scan_data_t* )calloc( ar_size, sizeof( scan_data_t ) );
+	if ( NULL == data ) {
+		log_critical( "Unable to allocate %zu bytes for scannerr data array! %m [%d]",
+		              sizeof( scan_data_t ) * ar_size, errno );
+		return NULL;
 	}
 
+	int res = 0;
+
+	for ( uint32_t i = 0; ( 0 == res ) && ( i < ar_size ); ++i ) {
+		res = init_scan_data( &data[i], i, dev_str, &superblocks[i], i );
+	}
+
+	if ( -1 == res )
+		free_scanner_data( &data );
+
+	return data;
+}
+
+
+void free_scanner_data( scan_data_t** data ) {
+	RETURN_VOID_IF_NULL( data );
+	FREE_PTR( *data );
+}
+
+
+int scanner( void* scan_data ) {
+	RETURN_INT_IF_NULL( scan_data );
 
 	uint8_t*     buf  = NULL;
 	scan_data_t* data = ( scan_data_t* )scan_data;
@@ -99,44 +116,4 @@ cleanup:
 	data->is_finished = true;
 
 	return res;
-}
-
-
-scan_data_t* create_scanner_data( uint32_t ar_size, char const* dev_str ) {
-	if ( 0 == ar_size ) {
-		log_critical("%s", "BUG! Called with zero array size!");
-		return NULL;
-	}
-	if ( NULL == dev_str ) {
-		log_critical("%s", "BUG! Called with NULL device string!");
-		return NULL;
-	}
-
-	scan_data_t* data = (scan_data_t*)calloc( ar_size, sizeof(scan_data_t) );
-	if ( NULL == data ) {
-		log_critical( "Unable to allocate %zu bytes for scannerr data array! %m [%d]",
-		              sizeof(scan_data_t) * ar_size, errno );
-		return NULL;
-	}
-
-	int res = 0;
-
-	for ( uint32_t i = 0; (0 == res) && (i < ar_size); ++i ) {
-		res = init_scan_data( &data[i], i, dev_str, &superblocks[i], i );
-	}
-
-	if ( -1 == res )
-		free_scanner_data( &data );
-
-	return data;
-}
-
-
-void free_scanner_data( scan_data_t** data ) {
-	if ( NULL == data ) {
-		log_critical("%s", "BUG! Called with NULL data!");
-		return;
-	}
-
-	FREE_PTR(*data);
 }

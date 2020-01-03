@@ -27,13 +27,6 @@ typedef struct _scan_data {
 } scan_data_t;
 
 
-/** @brief Main scan function
-  * @param[in] scan_data  Pointer to the scan_data_t instance this thread handles.
-  * @return 0 on success, non-zero otherwise.
-**/
-int scanner( void* scan_data );
-
-
 /** @brief Create and initialize the scan_data_t structure array
   * @param[in] ar_size  Size of the array to create
   * @param[in] dev_str  Pointer to the device string
@@ -47,6 +40,13 @@ scan_data_t* create_scanner_data( uint32_t ar_size, char const* dev_str );
   * @param[in] ar_size  Size of the array
 **/
 void free_scanner_data( scan_data_t** data );
+
+
+/** @brief Main scan function
+  * @param[in] scan_data  Pointer to the scan_data_t instance this thread handles.
+  * @return 0 on success, non-zero otherwise.
+**/
+int scanner( void* scan_data );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_SCANNER_H_INCLUDED
