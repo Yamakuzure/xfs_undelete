@@ -19,18 +19,9 @@
 
 static int init_analyze_data( analyze_data_t* analyze_data, uint32_t thrd_num, char const* dev_str,
                               xfs_sb* sb_data, uint32_t ag_num ) {
-	if ( NULL == analyze_data ) {
-		log_critical( "%s", "Bug! Called with NULL analyze_data!" );
-		return -1;
-	}
-	if ( NULL == sb_data ) {
-		log_critical( "%s", "Bug! Called with NULL sb_data!" );
-		return -1;
-	}
-	if ( sb_ag_count <= ag_num ) {
-		log_critical( "Bug! Called with ag_num %lu/%lu!", ag_num, sb_ag_count );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( analyze_data );
+	RETURN_INT_IF_NULL( sb_data );
+	RETURN_INT_IF_VLEV( sb_ag_count, ag_num );
 
 	analyze_data->ag_num       = ag_num;
 	analyze_data->analyzed     = 0;
@@ -48,11 +39,7 @@ static int init_analyze_data( analyze_data_t* analyze_data, uint32_t thrd_num, c
 
 
 int analyzer( void* analyze_data ) {
-	if ( NULL == analyze_data ) {
-		log_critical( "%s", "Bug! Called with NULL analyze_data!" );
-		return -1;
-	}
-
+	RETURN_INT_IF_NULL( analyze_data );
 
 	uint8_t*        buf  = NULL;
 	analyze_data_t* data = ( analyze_data_t* )analyze_data;
@@ -103,25 +90,19 @@ cleanup:
 
 
 analyze_data_t* create_analyze_data( uint32_t ar_size, char const* dev_str ) {
-	if ( 0 == ar_size ) {
-		log_critical("%s", "BUG! Called with zero array size!");
-		return NULL;
-	}
-	if ( NULL == dev_str ) {
-		log_critical("%s", "BUG! Called with NULL device string!");
-		return NULL;
-	}
+	RETURN_NULL_IF_ZERO( ar_size );
+	RETURN_NULL_IF_NULL( dev_str );
 
-	analyze_data_t* data = (analyze_data_t*)calloc( ar_size, sizeof(analyze_data_t) );
+	analyze_data_t* data = ( analyze_data_t* )calloc( ar_size, sizeof( analyze_data_t ) );
 	if ( NULL == data ) {
 		log_critical( "Unable to allocate %zu bytes for analyzer data array! %m [%d]",
-		              sizeof(analyze_data_t) * ar_size, errno );
+		              sizeof( analyze_data_t ) * ar_size, errno );
 		return NULL;
 	}
 
 	int res = 0;
 
-	for ( uint32_t i = 0; (0 == res) && (i < ar_size); ++i ) {
+	for ( uint32_t i = 0; ( 0 == res ) && ( i < ar_size ); ++i ) {
 		res = init_analyze_data( &data[i], sb_ag_count + i, dev_str, &superblocks[i], i );
 	}
 
@@ -133,10 +114,6 @@ analyze_data_t* create_analyze_data( uint32_t ar_size, char const* dev_str ) {
 
 
 void free_analyze_data( analyze_data_t** data ) {
-	if ( NULL == data ) {
-		log_critical("%s", "BUG! Called with NULL data!");
-		return;
-	}
-
-	FREE_PTR(*data);
+	RETURN_VOID_IF_NULL( data );
+	FREE_PTR( *data );
 }
