@@ -10,14 +10,8 @@
 
 
 int xfs_read_ex( xfs_ex* ex, uint8_t const* data ) {
-	if ( NULL == ex ) {
-		log_critical( "%s", "BUG: Called without 'ex' pointer!" );
-		return -1;
-	}
-	if ( NULL == data ) {
-		log_critical( "%s", "BUG: Called without 'data' pointer!" );
-		return -1;
-	}
+	RETURN_INT_IF_NULL( ex );
+	RETURN_INT_IF_NULL( data );
 
 	ex->is_prealloc = data[0] & 0x80; // == b10000000 aka first bit
 	ex->offset      = flip64( ( *( uint64_t* )( data + 0 ) & 0x7ffffffffffffe00 ) >> 9 ); // = Bits 2 to 55
