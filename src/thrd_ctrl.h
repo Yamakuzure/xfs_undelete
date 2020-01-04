@@ -14,6 +14,10 @@
 #include <threads.h>
 
 
+/// @return return the total number of analyzer threads running (aka working)
+uint32_t analyzers_running( void );
+
+
 /** @brief cleanup remaining threads data
   * Do not forget to call this before exiting `main()`!
 **/
@@ -27,6 +31,31 @@ void cleanup_threads( void );
   * else due to an error.
 **/
 void end_threads( void );
+
+
+/** @brief Count relevant data of the analyzer threads
+  *
+  * @param[out] analyzed  Pointer to take the sum of analyzed entries
+  * @param[out] dirents   Pointer to take the sum of gathered directory entries
+  * @param[out] files     Pointer to take the sum of forwarded file inodes
+**/
+void get_analyzer_stats( uint64_t* analyzed, uint64_t* dirents, uint64_t* files );
+
+
+/** @brief Count relevant data of the scanner threads
+  *
+  * @param[out] scanned  Pointer to take the sum of scanned sectors
+  * @param[out] dirents  Pointer to take the sum of forwarded directory inodes
+  * @param[out] inodes   Pointer to take the sum of forwarded deleted inodes
+**/
+void get_scanner_stats( uint64_t* scanned, uint64_t* dirents, uint64_t* inodes );
+
+
+/** @brief Count relevant data of the writer threads
+  *
+  * @param[out] undeleted  Pointer to take the sum of undeleted files
+**/
+void get_writer_stats( uint64_t* undeleted );
 
 
 /** @brief join all running analyzer threads
@@ -48,6 +77,17 @@ void join_scanners( bool finish_work );
   * @param[in] finish_work  If set to true, let the threads finish their work. Set to false to end them asap.
 **/
 void join_writers( bool finish_work );
+
+
+/** @brief monitor all running threads, write progress twice per second, return when all are finished.
+  *
+  * @param[in] max_threads  Number of threads that have been started
+**/
+void monitor_threads( uint32_t max_threads );
+
+
+/// @return return the total number of scanner threads running (aka working)
+uint32_t scanner_running( void );
 
 
 /** @brief Create and start one analyzer thread
@@ -88,6 +128,10 @@ int start_writer( write_data_t* data );
   * @param[in] do_work  Set to true if the threads are allowed to work, false to make them end themselves.
 **/
 void wakeup_threads( bool do_work );
+
+
+/// @return return the total number of writer threads running (aka working)
+uint32_t writers_running( void );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_THRD_CTRL_H_INCLUDED
