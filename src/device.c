@@ -298,6 +298,7 @@ int set_target_path( char const* dir_path ) {
 		log_critical( "Unable to resolve %s into a real path!", target_path );
 		return -1;
 	}
+	log_debug( "Searching device for %s", full_path );
 
 	struct mntent* ent     = NULL;
 	FILE*          entFile = setmntent( "/proc/mounts", "r" );
@@ -313,8 +314,10 @@ int set_target_path( char const* dir_path ) {
 				FREE_PTR( target_device );
 			}
 			// Note: This re-assignment solves problems with sub-mounts
-			if ( NULL == target_device )
+			if ( NULL == target_device ) {
 				target_device = strdup( ent->mnt_fsname );
+				log_debug( " ==> %s [%s] matches", ent->mnt_dir, ent->mnt_fsname );
+			}
 		}
 	}
 	endmntent( entFile );
@@ -324,19 +327,52 @@ int set_target_path( char const* dir_path ) {
 		return -1;
 	}
 
+	/* === Some systems, like ZFS, can result in their own  ===
+	 * === names like 'shared/data'. Let's try to decrypt   ===
+	 * === that and get a device name                       ===
+	 */
+	if ( strchr( target_device, '/' ) ) {
+		char*  tmp_device = strdup( target_device );
+		size_t tmp_size   = strlen( tmp_device );
+		int    off        = 'A' - 'a';
+
+		log_debug(" ==> %s has a slash... investigating", target_device);
+
+		for ( size_t i = 0; i < tmp_size; ++i ) {
+			if ( '/' == tmp_device[i] ) {
+				tmp_device[i] = 0x0;
+				break;
+			}
+			if ( isupper( tmp_device[i] ) )
+				tmp_device[i] -= off;
+		}
+
+		char tmp_full[PATH_MAX] = { 0x0 };
+		snprintf( tmp_full, PATH_MAX - 1, "/dev/disk/by-label/%s", tmp_device );
+		log_debug(" ==> Looking at %s ...", tmp_full);
+
+		// Is our assumption correct?
+		if ( realpath( tmp_full, full_path ) ) {
+			// it is. :-)
+			FREE_PTR( target_device );
+			target_device = strdup( full_path );
+		}
+	}
+
 	/* === Check whether the device is an SSD. We do not    ===
 	 * === want to got multi-threaded on a rotational disk! ===
 	 * ========================================================
 	 */
 	if ( -1 == is_device_ssd( &tgt_is_ssd, target_device ) ) {
 		log_error( "Can not determine whether %s is rotational", target_device );
-		log_warning( " Assuming %s is a spinning disk and going to read single-threaded.", target_device );
+		log_warning( " Assuming %s is a spinning disk and going to write single-threaded.", target_device );
 		tgt_is_ssd = false;
 	} else if ( tgt_is_ssd )
 		log_info( "%s seems to be an SSD -> Writing multi-threaded!", target_device );
 	else
 		log_info( "%s assumed to be a rotating disk -> Writing single-threaded", target_device );
 
-	return 0;
+	FREE_PTR( target_device );
 
+	return 0;
 }
