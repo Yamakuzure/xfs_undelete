@@ -31,6 +31,7 @@ static int init_analyze_data( analyze_data_t* analyze_data, uint32_t thrd_num, c
 	analyze_data->found_dirent = 0;
 	analyze_data->found_files  = 0;
 	analyze_data->is_finished  = false;
+	analyze_data->is_running   = false;
 	analyze_data->sb_data      = sb_data;
 	analyze_data->thread_num   = thrd_num;
 
@@ -58,6 +59,7 @@ int analyzer( void* analyze_data ) {
 	// Don't really start if we are told to stop
 	if ( data->do_stop )
 		goto cleanup;
+	data->is_running = true;
 
 	// First we need a buffer:
 	buf = malloc( sb_block_size );
@@ -84,6 +86,7 @@ cleanup:
 		free( buf );
 
 	data->is_finished = true;
+	data->is_running  = false;
 
 	return res;
 }
@@ -103,7 +106,7 @@ analyze_data_t* create_analyze_data( uint32_t ar_size, char const* dev_str ) {
 	int res = 0;
 
 	for ( uint32_t i = 0; ( 0 == res ) && ( i < ar_size ); ++i ) {
-		res = init_analyze_data( &data[i], sb_ag_count + i, dev_str, &superblocks[i], i );
+		res = init_analyze_data( &data[i], sb_ag_count + i + 1, dev_str, &superblocks[i], i );
 	}
 
 	if ( -1 == res )
