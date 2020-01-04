@@ -26,8 +26,6 @@ extern bool     tgt_is_ssd;       //!< If true, we can write multi-threaded
 // Progress and thread control values
 extern uint32_t        ag_scanned;  //!< Every joined scanner thread raises this by one (defined in thrd_ctrl.c)
 extern analyze_data_t* analyze_data;
-extern uint32_t        max_read_threads;
-extern uint32_t        max_write_threads;
 extern scan_data_t*    scan_data;
 extern write_data_t*   write_data;
 
