@@ -27,12 +27,13 @@ thread_local static size_t message_size = 0;
 
 
 // Progress lines are fixed (sorry) and need some info
-#define     progress_len  81
+#define     progress_len  93
 static char progress_line[progress_len] = { 0x0 };
-#define     progress_blnk "                                                                                "
-//                         12345678901234567890123456789012345678901234567890123456789012345678901234567890
-//                                  1         2         3         4         5         6         7         8
-// Demo:                   Scanned          0/ 134845696 sectors (  0.00%); 0 files restored;  0/ 4 threads
+#define     progress_blnk "                                                                                             "
+//                         123456789012345678901234567890123456789012345678901234567890123456789012345678900123456789012
+//                                  1         2         3         4         5         6         7         8          0
+// Demo:                   "[12/12] 1234567890/1234567890 sec (123.45%); 123456789/123456789 found; 123456789 restored"
+
 static bool have_progress     = false;
 
 
