@@ -16,9 +16,10 @@ typedef struct _scan_data {
 	char const*         device;       //!< Pointer to the device string. No copy, is never changed.
 	_Atomic( bool )     do_start;     //!< Initialized with false, set to true when the thread may run.
 	_Atomic( bool )     do_stop;      //!< Initialized with false, set to true when the thread shall break off
-	_Atomic( uint64_t ) found_dirent; //!< Increased by the thread, questioned by main
-	_Atomic( uint64_t ) found_inodes; //!< Increased by the thread, questioned by main
+	_Atomic( uint64_t ) frwrd_dirent; //!< Increased by the thread, questioned by main
+	_Atomic( uint64_t ) frwrd_inodes; //!< Increased by the thread, questioned by main
 	_Atomic( bool )     is_finished;  //!< Initialized with false, set to true when the thread is finished.
+	_Atomic( bool )     is_running;   //!< Set to true when woken up, and to false when stopping
 	xfs_sb*             sb_data;      //!< The Superblock data this thread shall handle
 	_Atomic( uint64_t ) sec_scanned;  //!< Increased by the thread, questioned by main
 	mtx_t               sleep_lock;   //!< Used for conditional sleeping until signaled

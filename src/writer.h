@@ -14,13 +14,14 @@
 typedef struct _write_data {
 	uint32_t            ag_num;      //!< Number of the Allocation Group this thread shall handle
 	char const*         device;      //!< Pointer to the device string. No copy, is never changed.
-	_Atomic( bool )     do_start;  //!< Initialized with false, set to true when the thread may run.
-	_Atomic( bool )     do_stop;   //!< Initialized with false, set to true when the thread shall break off
+	_Atomic( bool )     do_start;    //!< Initialized with false, set to true when the thread may run.
+	_Atomic( bool )     do_stop;     //!< Initialized with false, set to true when the thread shall break off
 	_Atomic( bool )     is_finished; //!< Initialized with false, set to true when the thread is finished.
+	_Atomic( bool )     is_running;   //!< Set to true when woken up, and to false when stopping
 	xfs_sb*             sb_data;     //!< The Superblock data this thread shall handle
 	mtx_t               sleep_lock;  //!< Used for conditional sleeping until signaled
 	uint32_t            thread_num;  //!< Number of the thread for logging
-	_Atomic( uint64_t ) undeleted; //!< Increased by the thread, questioned by main
+	_Atomic( uint64_t ) undeleted;   //!< Increased by the thread, questioned by main
 	cnd_t               wakeup_call; //!< Used by the main thread to signal the thread to continue
 } write_data_t;
 

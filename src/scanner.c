@@ -27,9 +27,10 @@ static int init_scan_data( scan_data_t* scan_data, uint32_t thrd_num, char const
 	scan_data->device       = dev_str;
 	scan_data->do_start     = false;
 	scan_data->do_stop      = false;
-	scan_data->found_dirent = 0;
-	scan_data->found_inodes = 0;
+	scan_data->frwrd_dirent = 0;
+	scan_data->frwrd_inodes = 0;
 	scan_data->is_finished  = false;
+	scan_data->is_running   = true;
 	scan_data->sb_data      = sb_data;
 	scan_data->sec_scanned  = 0;
 	scan_data->thread_num   = thrd_num;
@@ -52,7 +53,7 @@ scan_data_t* create_scanner_data( uint32_t ar_size, char const* dev_str ) {
 	int res = 0;
 
 	for ( uint32_t i = 0; ( 0 == res ) && ( i < ar_size ); ++i ) {
-		res = init_scan_data( &data[i], i, dev_str, &superblocks[i], i );
+		res = init_scan_data( &data[i], i + 1, dev_str, &superblocks[i], i );
 	}
 
 	if ( -1 == res )
@@ -88,6 +89,7 @@ int scanner( void* scan_data ) {
 	// Don't really start if we are told to stop
 	if ( data->do_stop )
 		goto cleanup;
+	data->is_running = true;
 
 	// First we need a buffer:
 	buf = malloc( sb_block_size );
@@ -114,6 +116,7 @@ cleanup:
 		free( buf );
 
 	data->is_finished = true;
+	data->is_running  = false;
 
 	return res;
 }

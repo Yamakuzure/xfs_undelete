@@ -26,6 +26,7 @@ static int init_write_data( write_data_t* write_data, uint32_t thrd_num, char co
 	write_data->do_start    = false;
 	write_data->do_stop     = false;
 	write_data->is_finished = false;
+	write_data->is_running  = false;
 	write_data->sb_data     = sb_data;
 	write_data->thread_num  = thrd_num;
 	write_data->undeleted   = 0;
@@ -48,7 +49,7 @@ write_data_t* create_writer_data( uint32_t ar_size, char const* dev_str ) {
 	int res = 0;
 
 	for ( uint32_t i = 0; (0 == res) && (i < ar_size); ++i ) {
-		res = init_write_data( &data[i], (2 * sb_ag_count) + i, dev_str, &superblocks[i], i );
+		res = init_write_data( &data[i], (2 * sb_ag_count) + i + 1, dev_str, &superblocks[i], i );
 	}
 
 	if ( -1 == res )
@@ -84,6 +85,7 @@ int writer( void* write_data ) {
 	// Don't really start if we are told to stop
 	if ( data->do_stop )
 		goto cleanup;
+	data->is_running = true;
 
 	// First we need a buffer:
 	buf = malloc( sb_block_size );
@@ -110,6 +112,7 @@ cleanup:
 		free( buf );
 
 	data->is_finished = true;
+	data->is_running  = false;
 
 	return res;
 }
