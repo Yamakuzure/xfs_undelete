@@ -26,3 +26,24 @@ e_file_type get_file_type( uint8_t ftype_num ) {
 	}
 	return FT_INVALID;
 }
+
+
+e_file_type get_file_type_from_dirent( uint8_t ftype_num ) {
+	switch( ftype_num ) {
+		case 1:
+			return FT_FILE;
+		case 2:
+			return FT_DIR;
+		case 3:
+			return FT_CHAR;
+		case 4:
+			return FT_BLK;
+		case 5:
+			return FT_FIFO;
+		case 6:
+			return FT_SOCK;
+		case 7:
+			return FT_SYM;
+	}
+	return FT_INVALID;
+}

@@ -23,4 +23,13 @@ typedef enum _file_type {
 e_file_type get_file_type( uint8_t ftype_num );
 
 
+/** @brief give back the e_file_type to @a ftype_num as found in directory entries
+  *
+  * Here another list is used than in inodes. *meh*
+  *
+  * @param[in] ftype_num  The numerical file type
+  * @return  The corresponding e_file_type or FT_INVALID if @a ftype_num is unknown
+**/
+e_file_type get_file_type_from_dirent( uint8_t ftype_num );
+
 #endif // PWX_XFS_UNDELETE_SRC_FILE_TYPE_H_INCLUDED
