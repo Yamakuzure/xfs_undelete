@@ -20,13 +20,13 @@ size_t DATA_START_V1 = 0x64;
 size_t DATA_START_V3 = 0xB0;
 
 
-static int build_data_map( xfs_in* in, uint16_t inode_size, uint8_t const* data ) {
+static int build_data_map( xfs_in_t* in, uint8_t const* data ) {
 	size_t start = in->version > 2 ? DATA_START_V3 : DATA_START_V1;
-	size_t end   = in->xattr_off ? start + ( in->xattr_off * 8 ) : inode_size;
+	size_t end   = in->xattr_off ? start + ( in->xattr_off * 8 ) : in->sb->inode_size;
 
 	if ( ST_DEV == in->data_fork_type ) {
-		log_error( "Special device data forks (0x%02x) are not supported.", in->data_fork_type );
-		log_info( "Ignoring inode %llu!", in->inode_id );
+		log_error( "Special device data forks (0x%02x) are not supported.\n" DUMP_STRIP_FMT,
+		           in->data_fork_type, DUMP_STRIP_DATA(0, data) );
 		return -1;
 	} else if ( ST_LOCAL == in->data_fork_type ) {
 		// Check whether the data part is in bounds
@@ -46,8 +46,8 @@ static int build_data_map( xfs_in* in, uint16_t inode_size, uint8_t const* data 
 
 		memcpy( in->d_loc_data, data + start, in->file_size );
 	} else if ( ST_EXTENTS == in->data_fork_type ) {
-		xfs_ex* curr  = NULL;
-		xfs_ex* next  = NULL;
+		xfs_ex_t* curr  = NULL;
+		xfs_ex_t* next  = NULL;
 		size_t  first = 0; // first byte to read;
 		size_t  last  = 0; // last byte to read
 
@@ -62,10 +62,10 @@ static int build_data_map( xfs_in* in, uint16_t inode_size, uint8_t const* data 
 			}
 
 			// Then allocate another extent structure
-			next = calloc( 1, sizeof( xfs_ex ) );
+			next = calloc( 1, sizeof( xfs_ex_t ) );
 			if ( NULL == next ) {
 				log_critical( "Unable to allocate %lu bytes for data extent!",
-				              sizeof( xfs_ex ) );
+				              sizeof( xfs_ex_t ) );
 				return -1;
 			}
 
@@ -93,32 +93,22 @@ static int build_data_map( xfs_in* in, uint16_t inode_size, uint8_t const* data 
 }
 
 
-static void build_xattr_map( xfs_in* in, uint16_t inode_size, uint8_t const* data ) {
+static void build_xattr_map( xfs_in_t* in, uint8_t const* data ) {
 	size_t start = ( in->xattr_off * 8 ) + in->version > 2 ? DATA_START_V3 : DATA_START_V1;
-	size_t end   = inode_size;
+	size_t end   = in->sb->inode_size;
 
 	if ( ST_DEV == in->xattr_type_flg ) {
 		log_error( "Special device xattr forks (0x%02x) are not supported.", in->xattr_type_flg );
 		log_info( " ==> Ignoring extended attributes for inode %llu!", in->inode_id );
 		return;
 	} else if ( ST_LOCAL == in->xattr_type_flg ) {
-		// Let's get the size of the attributes, first
-		uint16_t xattr_size = get_flip16u( data, start ); // The length includes the 4 bytes header
-
-		// Check whether the yattr part is in bounds
-		size_t last = start + xattr_size - 1;
-		if ( last >= end ) {
-			log_error( "Local xattr block ends out of bounds at byte %zu/%zu", last, end );
-			log_info( " ==> Ignoring extended attributes for inode %llu!", in->inode_id );
-			return;
-		}
-
-		// unpack xattr data
-		in->xattr_root = unpack_xattr_data( data + start, xattr_size );
-		// No check here. xattrs aren't that mission critical!
+		// Just unpack the xattr data, all errors are logged there, anayway
+		if ( NULL == in->xattr_root )
+			in->xattr_root = unpack_xattr_data( data + start, in->sb->inode_size - start, true );
+		// Errors have been logged already
 	} else if ( ST_EXTENTS == in->xattr_type_flg ) {
-		xfs_ex* curr  = NULL;
-		xfs_ex* next  = NULL;
+		xfs_ex_t* curr  = NULL;
+		xfs_ex_t* next  = NULL;
 		size_t  first = 0; // first byte to read;
 		size_t  last  = 0; // last byte to read
 
@@ -127,28 +117,22 @@ static void build_xattr_map( xfs_in* in, uint16_t inode_size, uint8_t const* dat
 			first = start + ( 16 * i );
 			last  = first + 15;
 			if ( last >= end ) {
-				log_error( "xattr extent %zu ends out of bounds at byte %zu/%zu",
-				           i, last, end );
-				log_info( " ==> Ignoring remaining extended attributes for inode %llu!",
-				          in->inode_id );
+				log_error( "inode %llu: xattr extent %zu ends out of bounds at byte %zu/%zu",
+				           in->inode_id, i, last, end );
 				return;
 			}
 
 			// Then allocate another extent structure
-			next = calloc( 1, sizeof( xfs_ex ) );
+			next = calloc( 1, sizeof( xfs_ex_t ) );
 			if ( NULL == next ) {
-				log_critical( "Unable to allocate %lu bytes for xattr extent!", sizeof( xfs_ex ) );
-				log_info( " ==> Ignoring remaining extended attributes for inode %llu!",
-				          in->inode_id );
+				log_critical( "Unable to allocate %lu bytes for xattr extent!",
+				              sizeof( xfs_ex_t ) );
 				return;
 			}
 
 			// Can it be read? (Should. Only errors are bugs if either is NULL)
-			if ( -1 == xfs_read_ex( next, data + first ) ) {
-				log_info( " ==> Ignoring remaining extended attributes for inode %llu!",
-				          in->inode_id );
+			if ( -1 == xfs_read_ex( next, data + first ) )
 				return;
-			}
 
 			// Set root or extent chain
 			if ( curr )
@@ -171,10 +155,10 @@ static void build_xattr_map( xfs_in* in, uint16_t inode_size, uint8_t const* dat
 }
 
 
-static xattr* free_xattr_chain( xattr* root ) {
+static xattr_t* free_xattr_chain( xattr_t* root ) {
 	if ( root ) {
-		xattr* curr = root;
-		xattr* next = curr->next;
+		xattr_t* curr = root;
+		xattr_t* next = curr->next;
 		while ( curr ) {
 			FREE_PTR( curr->name );
 			FREE_PTR( curr->value );
@@ -188,7 +172,11 @@ static xattr* free_xattr_chain( xattr* root ) {
 }
 
 
-bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count, uint8_t* padding) {
+bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count,
+                    uint8_t* padding, bool log_error) {
+	RETURN_NULL_IF_NULL( data );
+	RETURN_NULL_IF_ZERO( data_size );
+
 	bool     result      = false;
 	uint16_t xattr_size  = 0;
 	uint8_t  xattr_count = 0;
@@ -200,13 +188,24 @@ bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uin
 	xattr_size  = get_flip16u( data, 0 ); // The length includes the 4 bytes header
 	if ( (0 == xattr_size) || (xattr_size > data_size) ) {
 		// This is not xattr local data
+		if ( log_error && xattr_size )
+			log_error( "XATTR header size mismatch: %hu/%zu\n"
+			           DUMP_STRIP_FMT "\n" DUMP_STRIP_FMT,
+			           xattr_size, data_size,
+			           DUMP_STRIP_DATA(  0, data ),
+			           DUMP_STRIP_DATA( 16, data + 16) );
 		xattr_size = 0;
 		goto finish;
 	}
 
 	xattr_count = data[2];
 	xattr_padd  = data[3];
-	result      = true;
+
+	// If the padding is too large ( greater than 8? ), this isn't an xattr head.
+	if ( xattr_padd > 8 )
+		goto finish;
+
+	result = true;
 
 finish:
 	if ( x_size  ) *x_size  = xattr_size;
@@ -218,72 +217,90 @@ finish:
 
 
 // Returns the root of an unpacked xattr chain, or NULL if no chain was found
-xattr* unpack_xattr_data( uint8_t const* data, size_t data_len ) {
+xattr_t* unpack_xattr_data( uint8_t const* data, size_t data_len, bool log_error ) {
+	RETURN_NULL_IF_NULL( data );
+	RETURN_NULL_IF_ZERO( data_len );
+
 	uint16_t xattr_size  = 0;
 	uint8_t  xattr_count = 0;
 	uint8_t  xattr_padd  = 0;
 
-	if ( !is_xattr_head(data, data_len, &xattr_size, &xattr_count, &xattr_padd))
+	if ( !is_xattr_head(data, data_len, &xattr_size, &xattr_count, &xattr_padd, log_error))
 		return NULL; // nothing to do
 
 	size_t   offset      = 4; // Start after header
-	xattr*   curr        = NULL;
-	xattr*   next        = NULL;
-	xattr*   root        = NULL;
+	xattr_t*   curr        = NULL;
+	xattr_t*   next        = NULL;
+	xattr_t*   root        = NULL;
 
 	for ( size_t i = 0; i < xattr_count; ++i ) {
 		uint8_t name_len = data[offset];
 		uint8_t val_len  = data[offset + 1];
-		size_t  end_byte = offset + 2 + name_len + xattr_padd + val_len - 1;
+		// plus 1 byte flag
+
+		// As XATTRs aren't mission critical, check the name an value lengths.
+		// If both are zero, assume a borked block and break off. Silently.
+		if ( 0 == (name_len + val_len) ) {
+			i = xattr_count;
+			continue;
+		}
+
+		// Calculate and check the last byte this XATTR entry needs
+		size_t  end_byte = offset + 3 + name_len + xattr_padd + val_len - 1;
 
 		// Make sure we are not out of bounds!
 		if ( end_byte >= xattr_size ) {
+			if ( log_error )
+				log_error( "XATTR too long? off %zu nl %hhu vl %hhu pad %hhu; size %hu/%zu\n"
+				           DUMP_STRIP_FMT "\n" DUMP_STRIP_FMT,
+				           offset, name_len, val_len, xattr_padd,
+				           end_byte - offset, xattr_size - offset,
+				           DUMP_STRIP_DATA( offset,      data + offset ),
+				           DUMP_STRIP_DATA( offset + 16, data + offset + 16 ) );
 			return root;
 		}
 
 		// See whether the name makes sense
-		bool name_is_valid = true;
-		for ( size_t i = 0; name_is_valid && ( i < name_len ); ++i ) {
-			uint8_t check = data[offset + 3 + i];
-			if ( !( isprint( check )                  // Must be printable, unless ...
-			                || ( !check && ( ( i + 1 ) == name_len ) ) // ... it's the last character
-			      ) ) name_is_valid = false;
+		char const* safe_name = get_safe_name( (char*)data + offset + 3, name_len );
+		if ( strncmp( (char*)data + offset + 3, safe_name, name_len ) ) {
+			if ( log_error )
+				log_error( "XATTR name invalid: %s\n" DUMP_STRIP_FMT, safe_name,
+				           // Note: dump the 3 header bytes, too, so no +3 here.
+				           DUMP_STRIP_DATA( offset, data + offset ) );
+			return root;
 		}
-		if ( !name_is_valid )
-			return root; // No fuss...
 
 		// See whether the value makes sense
-		bool value_is_valid = true;
-		for ( size_t i = 0; value_is_valid && ( i < val_len ); ++i ) {
-			uint8_t check = data[offset + 3 + name_len + xattr_padd + i];
-			if ( !( isprint( check )                 // Must be printable, unless ...
-			                || ( !check && ( ( i + 1 ) == val_len ) ) // ... it's the last character
-			      ) ) value_is_valid = false;
-		}
-		if ( !value_is_valid )
+		size_t val_start = offset + 3 + name_len + xattr_padd;
+		char const* safe_value = get_safe_name( (char*)data + val_start, val_len );
+		if ( strncmp( (char*)data + val_start, safe_value, val_len ) ) {
+			if ( log_error )
+				log_error("XATTR value invalid: %s\n" DUMP_STRIP_FMT, safe_value,
+				          DUMP_STRIP_DATA( val_start, data + val_start ) );
 			return root;
+		}
 
 		// Allocate buffers for the name and value
 		// But add 1 byte, as xattr names are not NULL terminated,
 		// and values might, too, come without termination!
-		char* name = calloc( name_len + 1, 1 );
+		char* name = (char*)calloc( name_len + 1, 1 );
 		if ( NULL == name ) {
 			log_critical( "Unable to allocate %lu bytes for xattr name!", name_len + 1 );
 			return root;
 		}
-		char* value = calloc( val_len + 1, 1 );
-		if ( NULL == name ) {
+		char* value = (char*)calloc( val_len + 1, 1 );
+		if ( NULL == value ) {
 			log_critical( "Unable to allocate %lu bytes for xattr value!", val_len + 1 );
 			FREE_PTR( name );
 			return root;
 		}
 		memcpy( name,  data + offset + 3, name_len );
-		memcpy( value, data + offset + 3 + name_len + xattr_padd, val_len );
+		memcpy( value, data + val_start,  val_len  );
 
 		// Allocate the new xattr entry
-		next = calloc( 1, sizeof( xattr ) );
+		next = calloc( 1, sizeof( xattr_t ) );
 		if ( NULL == next ) {
-			log_critical( "Unable to allocate %zu bytes for xattr entry!", sizeof( xattr ) );
+			log_critical( "Unable to allocate %zu bytes for xattr entry!", sizeof( xattr_t ) );
 			log_info( "%s", " ==> Ignoring remaining extended attributes for this inode!" );
 			FREE_PTR( name );
 			FREE_PTR( value );
@@ -306,19 +323,19 @@ xattr* unpack_xattr_data( uint8_t const* data, size_t data_len ) {
 }
 
 
-void xfs_free_in( xfs_in** in ) {
+void xfs_free_in( xfs_in_t** in ) {
 	RETURN_VOID_IF_NULL( in );
 	if ( NULL == *in )
 		// Simply nothing to do
 		return;
 
 	// shortcut
-	xfs_in* lin = *in; // [l]ocal in
+	xfs_in_t* lin = *in; // [l]ocal in
 
 	// Remove data extent list
 	if ( lin->d_ext_root ) {
-		xfs_ex* curr    = lin->d_ext_root;
-		xfs_ex* next    = curr->next;
+		xfs_ex_t* curr    = lin->d_ext_root;
+		xfs_ex_t* next    = curr->next;
 		lin->d_ext_root = NULL;
 		while ( curr ) {
 			free( curr );
@@ -335,8 +352,8 @@ void xfs_free_in( xfs_in** in ) {
 
 	// Remove xattr extent list
 	if ( lin->x_ext_root ) {
-		xfs_ex* curr    = lin->x_ext_root;
-		xfs_ex* next    = curr->next;
+		xfs_ex_t* curr    = lin->x_ext_root;
+		xfs_ex_t* next    = curr->next;
 		lin->x_ext_root = NULL;
 		while ( curr ) {
 			free( curr );
@@ -353,21 +370,20 @@ void xfs_free_in( xfs_in** in ) {
 }
 
 
-int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
+int xfs_read_in( xfs_in_t* in, uint8_t const* data, int fd ) {
 	RETURN_INT_IF_NULL( in );
-	RETURN_INT_IF_NULL( sb );
 	RETURN_INT_IF_NULL( data );
 
 	// Copy and check magic first
 	memcpy( in->magic, data, 2 );
-	if ( memcmp( sb->magic, XFS_IN_MAGIC, 2 ) ) {
+	if ( memcmp( in->magic, XFS_IN_MAGIC, 2 ) ) {
 		log_error( "Wrong magic: 0x%02x%02x instead of 0x%02x%02x",
-		           in->magic[0],    in->magic[1], XFS_IN_MAGIC[0], XFS_IN_MAGIC[1] );
+		           in->magic[0], in->magic[1], XFS_IN_MAGIC[0], XFS_IN_MAGIC[1] );
 		return -1;
 	}
 
 	// As the magic is correct, check whether this is a deleted inode or a directory
-	in->is_deleted   = is_deleted_inode( data )   > 0 ? true : false;
+	in->is_deleted   = is_deleted_inode( data ) > 0 ? true : false;
 	in->is_directory = is_directory_block(data) > 0 ? true : false;
 	if ( !(in->is_deleted || in->is_directory) )
 		// Uninteresting for us
@@ -386,11 +402,11 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
 	// Copy CRC32 and UUID, then check the UUID
 	memcpy( in->in_crc32, data + 100,  4 );
 	memcpy( in->sb_UUID,  data + 160, 16 );
-	if ( ( in->version > 2 ) && memcmp( sb->UUID, in->sb_UUID, 16 ) ) {
+	if ( ( in->version > 2 ) && memcmp( in->sb->UUID, in->sb_UUID, 16 ) ) {
 		char in_uuid_str[37] = { 0x0 };
 		char sb_uuid_str[37] = { 0x0 };
 		format_uuid_str( in_uuid_str, in->sb_UUID );
-		format_uuid_str( sb_uuid_str, sb->UUID );
+		format_uuid_str( sb_uuid_str, in->sb->UUID );
 		log_error( "Inode %llu UUID mismatch:", in->inode_id );
 		log_error( "Device UUID: %s", sb_uuid_str );
 		log_error( "Inode UUID : %s", in_uuid_str );
@@ -412,7 +428,7 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
 	// Try to recover data fork type, extents used/B-Tree root
 	// and where the extended attributes start, if they are local.
 	if ( in->is_deleted ) {
-		if ( -1 == restore_inode( in, sb->inode_size, data, fd ) )
+		if ( -1 == restore_inode( in, in->sb->inode_size, data, fd ) )
 			// Completely fubar!
 			return -1;
 	} else
@@ -449,14 +465,14 @@ int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd ) {
 	}
 
 	// Handle file/directory storage (local, extents or btree)
-	if ( -1 == build_data_map( in, sb->inode_size, data ) )
+	if ( -1 == build_data_map( in, data ) )
 		return -1; // Already told what's wrong
 
 	// Handle xattr storage (local, extents or btree)
 	if ( NULL == in->xattr_root )
 		// Note: recover_inode() already unpacks xattr local data,
 		//       this here is only for directory nodes.
-		build_xattr_map( in, sb->inode_size, data );
+		build_xattr_map( in, data );
 		// Note 2: No check here. xattrs aren't that mission critical!
 
 	// We here? Fine!

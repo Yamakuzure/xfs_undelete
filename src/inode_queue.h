@@ -12,7 +12,7 @@
   *
   * @return The head element of the queue or NULL if the queue is empty
 **/
-xfs_in* in_pop( void );
+xfs_in_t* in_pop( void );
 
 
 /** @brief push an element onto the queue (aka push_back)
@@ -22,7 +22,7 @@ xfs_in* in_pop( void );
   * @param[in] Pointer to the element to push
   * return 0 on success, -1 if the new queue element could not be created.
 **/
-int in_push( xfs_in* in );
+int in_push( xfs_in_t* in );
 
 
 /** @brief shift an element from the queue (aka remove tail)
@@ -31,7 +31,7 @@ int in_push( xfs_in* in );
   *
   * @return The head element of the queue or NULL if the queue is empty
 **/
-xfs_in* in_shift( void );
+xfs_in_t* in_shift( void );
 
 
 /** @brief unshift an element under the queue (aka push_front)
@@ -41,7 +41,7 @@ xfs_in* in_shift( void );
   * @param[in] Pointer to the element to push
   * return 0 on success, -1 if the new queue element could not be created.
 **/
-int in_unshift( xfs_in* in );
+int in_unshift( xfs_in_t* in );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_INODE_QUEUE_H_INCLUDED

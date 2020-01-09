@@ -4,6 +4,7 @@
 
 
 #include "file_type.h"
+#include "xfs_dir.h"
 #include "xfs_ex.h"
 #include "xfs_sb.h"
 
@@ -28,7 +29,7 @@ typedef struct _xattr {
 	char*          name;
 	char*          value;
 	struct _xattr* next;
-} xattr;
+} xattr_t;
 
 
 /// @brief structure of an inode
@@ -84,17 +85,22 @@ typedef struct _xfs_in {
 
 	uint8_t     sb_UUID[16];    //!< Bytes 160-175 : UUID of the device, stored in the superblock
 
-	/* Data and xattr information */
-	xfs_ex*     d_ext_root;     //!< First data extent if used for file storage
+	/* Data, directory and xattr information */
+	xfs_dir_t*  d_dir_root;     //!< Directory structure if used as local short form dir
+	xfs_ex_t*   d_ext_root;     //!< First data extent if used for file storage
 	uint8_t*    d_loc_data;     //!< Local data if the file is stored inside the inode
-	xfs_ex*     x_ext_root;     //!< First xattr extent if used for extended attributes
-	xattr*      xattr_root;     //!< Root element of the xattr chain
+	xfs_ex_t*   x_ext_root;     //!< First xattr extent if used for extended attributes
+	xattr_t*    xattr_root;     //!< Root element of the xattr chain
 
 	/* Some helper values for internal use */
-	e_file_type ftype;
-	bool        is_deleted;
-	bool        is_directory;
-} xfs_in;
+	uint32_t    ag_num;       //!< The allocation group number this inode belongs to
+	size_t      block;        //!< The absolute block in which the inode resides
+	e_file_type ftype;        //!< Detected file type
+	bool        is_deleted;   //!< True if this is a deleted inode
+	bool        is_directory; //!< True if this is sure to be a directory inode
+	size_t      offset;       //!< Offset inside the block
+	xfs_sb_t*   sb;           //!< pointer to the superblock for this allocation group
+} xfs_in_t;
 
 
 /** @brief Check whether the given @a data starts an xattr block
@@ -104,24 +110,27 @@ typedef struct _xfs_in {
   * @param[out] x_size  If not NULL, this value is set to the size of the xattr local block, including header
   * @param[out] x_count If not Null, this value is set to the number of xattr entries
   * @param[out] padding  If not NULL, this value is set to the number of padding bytes
+  * @param[in] log_error  If set to true, issue an error message if any check fails
   * @return true if this starts an xattr block, false otherwise
 **/
-bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count, uint8_t* padding );
+bool is_xattr_head( uint8_t const* data, size_t data_size, uint16_t* x_size, uint8_t* x_count,
+                    uint8_t* padding, bool log_error );
 
 
 /** @brief Unpack xattr data and create an xattr chain from the findings
   *
   * @param[in] data  pointer to the data to analyze
   * @param[in] data_len size of the data to analyze
+  * @param[in] log_error  If set to true, issue an error message if any check fails
   * @return A pointer to the root of an XATTR chain, or NULL on failure
 **/
-xattr* unpack_xattr_data( uint8_t const* data, size_t data_len );
+xattr_t* unpack_xattr_data( uint8_t const* data, size_t data_len, bool log_error );
 
 
 /** @brief Destroy xfs_in structures with this function
   * @param[out] in pointer to the struct pointer of the inode structure to destroy. Sets *in to NULL.
 **/
-void xfs_free_in( xfs_in** in );
+void xfs_free_in( xfs_in_t** in );
 
 
 /** @brief read inode data from a data block
@@ -129,12 +138,11 @@ void xfs_free_in( xfs_in** in );
   * There are no checks. The @a data block must have sb->inode_size bytes. Your responsibility!
   *
   * @param[out] in    The xfs_in inode structure to fill
-  * @param[in]  sb    Pointer to the superblock structure this @a data belongs to.
   * @param[in]  data  Pointer to the data block to interpret.
   * @param[in]  fd    File Descriptor for reading from the source device.
   * @return 0 on success, -1 on error
 **/
-int xfs_read_in( xfs_in* in, xfs_sb const* sb, uint8_t const* data, int fd );
+int xfs_read_in( xfs_in_t* in, uint8_t const* data, int fd );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_IN_H_INCLUDED

@@ -33,7 +33,7 @@ static in_queue_t* in_tail = NULL;
 
 
 /// @brief internal in_queue_t creator. Returns -1 on calloc failure.
-static int create_in_elem( in_queue_t** elem, xfs_in* in ) {
+static int create_in_elem( in_queue_t** elem, xfs_in_t* in ) {
 	in_queue_t* new_elem = calloc( 1, sizeof( struct _in_queue ) );
 
 	if ( new_elem ) {
@@ -47,9 +47,9 @@ static int create_in_elem( in_queue_t** elem, xfs_in* in ) {
 }
 
 
-xfs_in* in_pop( void ) {
+xfs_in_t* in_pop( void ) {
 	in_queue_t* elem   = NULL;
-	xfs_in*     result = NULL;
+	xfs_in_t*     result = NULL;
 
 	mtx_lock( &queue_lock );
 	if ( in_head ) {
@@ -71,7 +71,7 @@ xfs_in* in_pop( void ) {
 }
 
 
-int in_push( xfs_in* in ) {
+int in_push( xfs_in_t* in ) {
 	RETURN_INT_IF_NULL( in );
 
 	in_queue_t* elem = NULL;
@@ -95,9 +95,9 @@ int in_push( xfs_in* in ) {
 }
 
 
-xfs_in* in_shift( void ) {
+xfs_in_t* in_shift( void ) {
 	in_queue_t* elem   = NULL;
-	xfs_in*     result = NULL;
+	xfs_in_t*     result = NULL;
 
 	mtx_lock( &queue_lock );
 	if ( in_tail ) {
@@ -119,7 +119,7 @@ xfs_in* in_shift( void ) {
 }
 
 
-int in_unshift( xfs_in* in ) {
+int in_unshift( xfs_in_t* in ) {
 	RETURN_INT_IF_NULL( in );
 
 	in_queue_t* elem = NULL;
