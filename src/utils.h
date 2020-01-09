@@ -37,6 +37,27 @@ void format_uuid_str( char* str, uint8_t const* uuid );
 char const* get_human_size( size_t full_size );
 
 
+/** @brief return a safe representation of @a name
+  *
+  * The return value is local static, do *NOT* free it!
+  * All characters that fail isprint() are substituted with '?'.
+  * The maximum length is 255 characters. Everything above that will be ignored.
+  *
+  * @param[in] name  Max 255 characters long name to check
+  * @param[in] name_len  Do not check more than @a name_len characters
+  * @return @a name with all !isprint() characters set to '?'
+**/
+char const* get_safe_name( char const* name, size_t name_len );
+
+
+/** @brief check whether the given data is made of zeroes
+  * @param[in] data  Pointer to the data to check
+  * @param[in] len  Number of bytes to check
+  * @return  true if empty, false if at least one byte is set.
+**/
+bool is_data_empty( uint8_t const* data, size_t len );
+
+
 /** @brief compile a location information string
   *
   * The output format is:
@@ -91,27 +112,36 @@ int mkdirs( char const* path );
 #define TAKE_PTR(p) (p); p = NULL
 #define RELEASE(p)  (p)->prev = NULL; (p)->next = NULL
 
+// The following are several helper macros that do nothing unless xfs_undelete is built in debug mode.
+#if defined(PWX_DEBUG)
+// The format string of one line of hexdump -C style strip dumping
+#  define DUMP_STRIP_FMT \
+	"%08x | " \
+	"%02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x | " \
+	"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c"
+
+// Put together the data needed to fill one line of DUMP_STRIP_FMT
+// ( Quite obvious why these only do something in debug mode, huh? )
+#  define DUMP_STRIP_DATA(_off , _dat) _off,                    \
+	*(_dat +  0), *(_dat +  1), *(_dat +  2), *(_dat +  3), \
+	*(_dat +  4), *(_dat +  5), *(_dat +  6), *(_dat +  7), \
+	*(_dat +  8), *(_dat +  9), *(_dat + 10), *(_dat + 11), \
+	*(_dat + 12), *(_dat + 13), *(_dat + 14), *(_dat + 15), \
+	isprint(*(_dat +  0)) ? *(_dat +  0) : '.', isprint(*(_dat +  1)) ? *(_dat +  1) : '.', \
+	isprint(*(_dat +  2)) ? *(_dat +  2) : '.', isprint(*(_dat +  3)) ? *(_dat +  3) : '.', \
+	isprint(*(_dat +  4)) ? *(_dat +  4) : '.', isprint(*(_dat +  5)) ? *(_dat +  5) : '.', \
+	isprint(*(_dat +  6)) ? *(_dat +  6) : '.', isprint(*(_dat +  7)) ? *(_dat +  7) : '.', \
+	isprint(*(_dat +  8)) ? *(_dat +  8) : '.', isprint(*(_dat +  9)) ? *(_dat +  9) : '.', \
+	isprint(*(_dat + 10)) ? *(_dat + 10) : '.', isprint(*(_dat + 11)) ? *(_dat + 11) : '.', \
+	isprint(*(_dat + 12)) ? *(_dat + 12) : '.', isprint(*(_dat + 13)) ? *(_dat + 13) : '.', \
+	isprint(*(_dat + 14)) ? *(_dat + 14) : '.', isprint(*(_dat + 15)) ? *(_dat + 15) : '.'
+
 // Shortcut to dump a strip of data, hexdump -C style
 // Note: Uses log_debug() so it does nothing on release builds.
-#define DUMP_STRIP(_off, _dat) \
-	log_debug("%08x |"     \
-	          " %02x %02x %02x %02x %02x %02x %02x %02x " \
-	          " %02x %02x %02x %02x %02x %02x %02x %02x " \
-	          "| %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",       \
-	          _off,                                       \
-	          _dat[0], _dat[1], _dat[ 2], _dat[ 3], _dat[ 4], _dat[ 5], _dat[ 6], _dat[ 7], \
-	          _dat[8], _dat[9], _dat[10], _dat[11], _dat[12], _dat[13], _dat[14], _dat[15], \
-	          isprint(_dat[ 0]) ? _dat[ 0] : '.', isprint(_dat[ 1]) ? _dat[ 1] : '.',       \
-	          isprint(_dat[ 2]) ? _dat[ 2] : '.', isprint(_dat[ 3]) ? _dat[ 3] : '.',       \
-	          isprint(_dat[ 4]) ? _dat[ 4] : '.', isprint(_dat[ 5]) ? _dat[ 5] : '.',       \
-	          isprint(_dat[ 6]) ? _dat[ 6] : '.', isprint(_dat[ 7]) ? _dat[ 7] : '.',       \
-	          isprint(_dat[ 8]) ? _dat[ 8] : '.', isprint(_dat[ 9]) ? _dat[ 9] : '.',       \
-	          isprint(_dat[10]) ? _dat[10] : '.', isprint(_dat[11]) ? _dat[11] : '.',       \
-	          isprint(_dat[12]) ? _dat[12] : '.', isprint(_dat[13]) ? _dat[13] : '.',       \
-	          isprint(_dat[14]) ? _dat[14] : '.', isprint(_dat[15]) ? _dat[15] : '.')
+#  define DUMP_STRIP(_off, _dat) \
+	log_debug(DUMP_STRIP_FMT "\n", DUMP_STRIP_DATA(_off, _dat))
 
 // Shortcut to check for a buggy call to a function.
-#if defined(PWX_DEBUG)
 #  define RETURN_INT_IF_NULL(_val) \
 	if ( NULL == (_val) ) { log_critical( "BUG! Called with NULL %s!", #_val ); \
 		return -1; }
@@ -133,12 +163,15 @@ int mkdirs( char const* path );
 	if ( NULL == (_val) ) { log_critical( "BUG! Called with NULL %s!", #_val ); \
 		return 0; }
 #else
-#  define RETURN_INT_IF_NULL(_val) while(0){}
+#  define DUMP_STRIP_FMT                 "%s"
+#  define DUMP_STRIP_DATA(_off , _dat)   ""
+#  define DUMP_STRIP(_off, _dat)         while(0) {}
+#  define RETURN_INT_IF_NULL(_val)       while(0){}
 #  define RETURN_INT_IF_VLEV(_l_v, _r_v) while(0){}
-#  define RETURN_NULL_IF_NULL(_val) while(0){}
-#  define RETURN_NULL_IF_ZERO(_val) while(0){}
-#  define RETURN_VOID_IF_NULL(_val) while(0){}
-#  define RETURN_ZERO_IF_NULL(_val) while(0){}
+#  define RETURN_NULL_IF_NULL(_val)      while(0){}
+#  define RETURN_NULL_IF_ZERO(_val)      while(0){}
+#  define RETURN_VOID_IF_NULL(_val)      while(0){}
+#  define RETURN_ZERO_IF_NULL(_val)      while(0){}
 #endif // debug
 
 

@@ -8,6 +8,7 @@
 #include "utils.h"
 
 
+#include <ctype.h>
 #include <errno.h>
 #include <linux/limits.h>
 #include <stdio.h>
@@ -65,6 +66,35 @@ char const* get_human_size( size_t full_size ) {
 	snprintf( result, 8, "%4zu%3s", value, reduct < 12 ? suffix[reduct] : "N/A" );
 
 	return result;
+}
+
+
+char const* get_safe_name( char const* name, size_t name_len ) {
+	static char safe_name[256] = { 0x0 };
+	bool        name_end       = false;
+	size_t      check_max      = name_len > 255 ? 255 : name_len;
+
+	memset( safe_name, 0, 256 );
+
+	for ( size_t i = 0; !name_end && ( i < check_max ); ++i ) {
+		if ( isprint( name[i] ) )
+			safe_name[i] = name[i];
+		else if ( name[i] )
+			safe_name[i] = '?';
+		else
+			name_end = true; // NULL byte?
+	}
+
+	return safe_name;
+}
+
+
+bool is_data_empty( uint8_t const* data, size_t len ) {
+	for ( size_t i = 0; i < len; ++i ) {
+		if ( data[i] )
+			return false;
+	}
+	return true;
 }
 
 
