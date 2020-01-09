@@ -23,7 +23,7 @@
 #define BREAK_OFF { res = EXIT_FAILURE ; goto cleanup; }
 
 // Another two shortcuts to make one-func-tests easier on the eye
-#define TEST_OR_FAIL( func ) if (   -1 == ( func ) ) BREAK_OFF
+#define EXEC_OR_FAIL( func ) if (   -1 == ( func ) ) BREAK_OFF
 #define SET_OR_FAIL(  val  ) if ( NULL == (  val ) ) BREAK_OFF
 
 
@@ -31,7 +31,6 @@ int main( int argc, char const* argv[] ) {
 	char*           device_path  = NULL;
 	char*           output_dir   = NULL;
 	int             res          = EXIT_SUCCESS;
-	size_t          start_block  = 0;
 
 	/// === Parse command line options. ===
 	/// ===================================
@@ -60,15 +59,15 @@ int main( int argc, char const* argv[] ) {
 
 	/// === Set the source device, remount ro and check whether it is an SSD ===
 	/// ========================================================================
-	TEST_OR_FAIL( set_source_device( device_path ) );
+	EXEC_OR_FAIL( set_source_device( device_path ) );
 
 	/// === Create the target path and check whether its device is an SSD ===
 	/// =====================================================================
-	TEST_OR_FAIL( set_target_path( output_dir ) );
+	EXEC_OR_FAIL( set_target_path( output_dir ) );
 
 	/// === Scan the Superblocks, we'll need them to get started. ===
 	/// =============================================================
-	TEST_OR_FAIL( scan_superblocks() )
+	EXEC_OR_FAIL( scan_superblocks() )
 
 	/// ===  ----------------------
 	/// ===  --- Main Work Loop ---
@@ -103,15 +102,15 @@ int main( int argc, char const* argv[] ) {
 		// ---------------------------------------------------------------------
 		if ( src_is_ssd ) {
 			for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
-				TEST_OR_FAIL( start_analyzer( &analyze_data[i] ) );
-				TEST_OR_FAIL( start_scanner(  &scan_data[i] ) );
+				EXEC_OR_FAIL( start_analyzer( &analyze_data[i] ) );
+				EXEC_OR_FAIL( start_scanner(  &scan_data[i] ) );
 				if ( tgt_is_ssd || ( 0 == i ) ) {
 					// If tgt is rotational, only one writer thread is allowed.
-					TEST_OR_FAIL( start_writer( &write_data[i] ) );
+					EXEC_OR_FAIL( start_writer( &write_data[i] ) );
 				}
 			}
 		} else
-			TEST_OR_FAIL( start_scanner( &scan_data[ag_scanned] ) );
+			EXEC_OR_FAIL( start_scanner( &scan_data[ag_scanned] ) );
 
 		// ------------------------------------------------------------
 		// --- 2) Wake up all threads                               ---
@@ -142,13 +141,13 @@ int main( int argc, char const* argv[] ) {
 		 */
 
 		// First analyze ...
-		TEST_OR_FAIL( start_analyzer( &analyze_data[ag_scanned] ) );
+		EXEC_OR_FAIL( start_analyzer( &analyze_data[ag_scanned] ) );
 		wakeup_threads( true );
 		monitor_threads( max_threads );
 		join_analyzers( true );
 
 		// Then write...
-		TEST_OR_FAIL( start_writer( &write_data[ag_scanned] ) );
+		EXEC_OR_FAIL( start_writer( &write_data[ag_scanned] ) );
 		wakeup_threads( true );
 		monitor_threads( max_threads );
 		join_writers( true );
@@ -173,10 +172,8 @@ cleanup:
 		end_threads();
 
 	free_devices();
-	if ( device_path )
-		free( device_path );
-	if ( output_dir )
-		free( output_dir );
+	FREE_PTR( device_path );
+	FREE_PTR( output_dir );
 
 	return res;
 } /* main() */
