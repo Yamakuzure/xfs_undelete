@@ -16,7 +16,7 @@
 
 
 static int init_write_data( write_data_t* write_data, uint32_t thrd_num, char const* dev_str,
-                            xfs_sb* sb_data, uint32_t ag_num ) {
+                            xfs_sb_t* sb_data, uint32_t ag_num ) {
 	RETURN_INT_IF_NULL( write_data );
 	RETURN_INT_IF_NULL( sb_data );
 	RETURN_INT_IF_VLEV( sb_ag_count, ag_num );

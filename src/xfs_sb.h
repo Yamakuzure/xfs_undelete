@@ -79,7 +79,7 @@ typedef struct _xfs_sb {
 	uint64_t last_sb_upd_lsn;  //!< Bytes 240-247  Log seq number of last superblock update
 	uint8_t  inco_UUID[16];    //!< Bytes 248-263  UUID used if INCOMPAT_META_UUID feature
 	uint64_t inco_rm_btree;    //!< Bytes 264-271  If INCOMPAT_META_RMAPBT, inode of RM btree
-} xfs_sb;
+} xfs_sb_t;
 
 
 /** @brief read a superblock from a file descriptor
@@ -91,7 +91,7 @@ typedef struct _xfs_sb {
   * @param[in]  bs  Block size of the file system
   * @return 0 on success, -1 if anything went wrong.
 **/
-int xfs_read_sb( xfs_sb* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t bs );
+int xfs_read_sb( xfs_sb_t* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t bs );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_SB_H_INCLUDED

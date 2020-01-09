@@ -18,7 +18,7 @@
 
 
 static int init_analyze_data( analyze_data_t* analyze_data, uint32_t thrd_num, char const* dev_str,
-                              xfs_sb* sb_data, uint32_t ag_num ) {
+                              xfs_sb_t* sb_data, uint32_t ag_num ) {
 	RETURN_INT_IF_NULL( analyze_data );
 	RETURN_INT_IF_NULL( sb_data );
 	RETURN_INT_IF_VLEV( sb_ag_count, ag_num );

@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 
-int xfs_read_sb( xfs_sb* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t bs ) {
+int xfs_read_sb( xfs_sb_t* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t bs ) {
 	RETURN_INT_IF_NULL( sb );
 
 	uint8_t buf[271] = { 0x0 };
