@@ -26,6 +26,18 @@ int is_deleted_inode(uint8_t const* data);
 int is_directory_block(uint8_t const* data);
 
 
+/** @brief Check whether @a data points to a valid inode structure.
+  *
+  * This function does not do a full forensic analysis, it only checks the
+  * most prominent values that must exist in both deleted and directory inodes.
+  *
+  * @param[in] sb    Pointer to the xfs_sb structure the @a data belongs to
+  * @param[in] data  Pointer to the data to check
+  * @return true if this looks legit, false otherwise.
+**/
+bool is_valid_inode( xfs_sb_t const* sb, uint8_t const* data );
+
+
 /** @brief Try to recover information about an deleted inode
   *
   * @param[in,out] in  The inode structure to use and complete
@@ -34,7 +46,7 @@ int is_directory_block(uint8_t const* data);
   * @param[in] fd  File descriptor to read from the source device
   * @return 0 on success, -1 on failure.
 **/
-int restore_inode( xfs_in* in, uint16_t inode_size, uint8_t const* data, int fd );
+int restore_inode( xfs_in_t* in, uint16_t inode_size, uint8_t const* data, int fd );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_FORENSICS_H_INCLUDED
