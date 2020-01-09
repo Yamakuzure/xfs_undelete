@@ -9,7 +9,7 @@
 #include "xfs_ex.h"
 
 
-int xfs_read_ex( xfs_ex* ex, uint8_t const* data ) {
+int xfs_read_ex( xfs_ex_t* ex, uint8_t const* data ) {
 	RETURN_INT_IF_NULL( ex );
 	RETURN_INT_IF_NULL( data );
 

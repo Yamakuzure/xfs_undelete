@@ -10,7 +10,7 @@ typedef struct _xfs_ex {
 	uint64_t block;       //!< Bits  56 - 107 : (52) Absolute block address of the start of the extent
 	uint32_t length;      //!< Bits 108 - 128 : (21) Number of blocks in the extent
 	struct _xfs_ex* next; //!< Pointer to the next extent following this
-} xfs_ex;
+} xfs_ex_t;
 
 
 /** @brief unpack a 16 bytes extent into its components
@@ -18,7 +18,7 @@ typedef struct _xfs_ex {
   * @param[in]  data  The data to read
   * @return 0 on success, -1 one otherwise.
 **/
-int xfs_read_ex( xfs_ex* ex, uint8_t const* data );
+int xfs_read_ex( xfs_ex_t* ex, uint8_t const* data );
 
 
 #endif // PWX_XFS_UNDELETE_SRC_XFS_EX_H_INCLUDED
