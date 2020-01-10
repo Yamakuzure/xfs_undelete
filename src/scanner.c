@@ -223,10 +223,10 @@ int scanner( void* scan_data ) {
 
 					// That inode is good, so push or unshift it.
 					if ( FT_DIR == inode->ftype ) {
-						r = in_unshift( inode );
+						r = dir_in_push( inode );
 						data->frwrd_dirent++;
 					} else if ( FT_FILE == inode->ftype ) {
-						r = in_push( inode );
+						r = file_in_push( inode );
 						data->frwrd_inodes++;
 					} else
 						// Other types are irrelevant at this time

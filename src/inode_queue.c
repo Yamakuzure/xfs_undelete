@@ -22,15 +22,18 @@ typedef struct _in_queue {
 } in_queue_t;
 
 
-/* To be thread safe we need a central mutex.
+/* To be thread safe we need a central mutex per queue.
  * Any operation must be solitude!
  */
-static mtx_t queue_lock;
+static mtx_t dir_queue_lock;
+static mtx_t file_queue_lock;
 
 
-/* We need to know both head and tail */
-static in_queue_t* in_head = NULL;
-static in_queue_t* in_tail = NULL;
+/* We need to know both queues head and tail */
+static in_queue_t* dir_in_head  = NULL;
+static in_queue_t* dir_in_tail  = NULL;
+static in_queue_t* file_in_head = NULL;
+static in_queue_t* file_in_tail = NULL;
 
 
 /// @brief internal in_queue_t creator. Returns -1 on calloc failure.
@@ -51,26 +54,33 @@ static int create_in_elem( in_queue_t** elem, xfs_in_t* in ) {
 void in_clear( void ) {
 	xfs_in_t* elem = NULL;
 
+	// Directory queue
 	do {
-		elem = in_pop();
+		elem = dir_in_pop();
+		xfs_free_in( &elem );
+	} while ( elem );
+
+	// File queue
+	do {
+		elem = file_in_pop();
 		xfs_free_in( &elem );
 	} while ( elem );
 }
 
 
-xfs_in_t* in_pop( void ) {
+xfs_in_t* dir_in_pop( void ) {
 	in_queue_t* elem   = NULL;
-	xfs_in_t*     result = NULL;
+	xfs_in_t*   result = NULL;
 
-	mtx_lock( &queue_lock );
-	if ( in_head ) {
-		elem  = in_head;
-		in_head = elem->next;
-		if ( NULL == in_head )
+	mtx_lock( &dir_queue_lock );
+	if ( dir_in_head ) {
+		elem        = dir_in_head;
+		dir_in_head = elem->next;
+		if ( NULL == dir_in_head )
 			// Was last element
-			in_tail = NULL;
+			dir_in_tail = NULL;
 	}
-	mtx_unlock( &queue_lock );
+	mtx_unlock( &dir_queue_lock );
 
 	if ( elem ) {
 		result = TAKE_PTR( elem->in );
@@ -82,7 +92,7 @@ xfs_in_t* in_pop( void ) {
 }
 
 
-int in_push( xfs_in_t* in ) {
+int dir_in_push( xfs_in_t* in ) {
 	RETURN_INT_IF_NULL( in );
 
 	in_queue_t* elem = NULL;
@@ -90,17 +100,65 @@ int in_push( xfs_in_t* in ) {
 	if ( -1 == create_in_elem( &elem, in ) )
 		return -1;
 
-	mtx_lock( &queue_lock );
-	if ( in_tail ) {
-		in_tail->next = elem;
-		elem->prev    = in_tail;
-		in_tail       = elem;
+	mtx_lock( &dir_queue_lock );
+	if ( dir_in_tail ) {
+		dir_in_tail->next = elem;
+		elem->prev        = dir_in_tail;
+		dir_in_tail       = elem;
 	} else {
 		// First element
-		in_head = elem;
-		in_tail = elem;
+		dir_in_head = elem;
+		dir_in_tail = elem;
 	}
-	mtx_unlock( &queue_lock );
+	mtx_unlock( &dir_queue_lock );
+
+	return 0;
+}
+
+
+xfs_in_t* file_in_pop( void ) {
+	in_queue_t* elem   = NULL;
+	xfs_in_t*   result = NULL;
+
+	mtx_lock( &file_queue_lock );
+	if ( file_in_head ) {
+		elem         = file_in_head;
+		file_in_head = elem->next;
+		if ( NULL == file_in_head )
+			// Was last element
+			file_in_tail = NULL;
+	}
+	mtx_unlock( &file_queue_lock );
+
+	if ( elem ) {
+		result = TAKE_PTR( elem->in );
+		RELEASE( elem );
+		FREE_PTR( elem );
+	}
+
+	return result;
+}
+
+
+int file_in_push( xfs_in_t* in ) {
+	RETURN_INT_IF_NULL( in );
+
+	in_queue_t* elem = NULL;
+
+	if ( -1 == create_in_elem( &elem, in ) )
+		return -1;
+
+	mtx_lock( &file_queue_lock );
+	if ( file_in_tail ) {
+		file_in_tail->next = elem;
+		elem->prev        = file_in_tail;
+		file_in_tail       = elem;
+	} else {
+		// First element
+		file_in_head = elem;
+		file_in_tail = elem;
+	}
+	mtx_unlock( &file_queue_lock );
 
 	return 0;
 }
