@@ -213,21 +213,13 @@ int scanner( void* scan_data ) {
 
 			if ( is_valid_inode( data->sb_data, buf_p )
 			  && (is_deleted_inode( buf_p ) || is_directory_block( buf_p ) ) ) {
-				xfs_in_t* inode = ( xfs_in_t* )calloc( 1, sizeof( xfs_in_t ) );
 
-				if ( NULL == inode ) {
-					log_critical( "Unable to allocate %zu bytes for inode structure: %m %d",
-					              sizeof( xfs_in_t ), errno );
+				xfs_in_t* inode = xfs_create_in( data->ag_num, cur, offset );
+				if ( NULL == inode )
 					goto cleanup;
-				}
-
-				inode->ag_num = data->ag_num;
-				inode->block  = cur;
-				inode->offset = offset;
-				inode->sb     = data->sb_data;
 
 				if ( 0 == xfs_read_in( inode, buf_p, fd ) ) {
-					int r;
+					int r = 1;
 
 					// That inode is good, so push or unshift it.
 					if ( FT_DIR == inode->ftype ) {
@@ -248,7 +240,9 @@ int scanner( void* scan_data ) {
 
 /// Only scan until enough inodes are dumped.
 #if defined(PWX_DEBUG)
-					if ( -1 == debug_dump_inode(inode, buf) ) {
+					// Note: debug_dump_inode returns -1 if enough inodes have been
+					//       Dumped. We don't fail here, just end work early.
+					if ( (0 == r) && (-1 == debug_dump_inode(inode, buf)) ) {
 						res = 0;
 						goto cleanup;
 					}

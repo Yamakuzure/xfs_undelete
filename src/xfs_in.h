@@ -94,11 +94,11 @@ typedef struct _xfs_in {
 
 	/* Some helper values for internal use */
 	uint32_t    ag_num;       //!< The allocation group number this inode belongs to
-	size_t      block;        //!< The absolute block in which the inode resides
+	uint64_t    block;        //!< The absolute block in which the inode resides
 	e_file_type ftype;        //!< Detected file type
 	bool        is_deleted;   //!< True if this is a deleted inode
 	bool        is_directory; //!< True if this is sure to be a directory inode
-	size_t      offset;       //!< Offset inside the block
+	uint32_t    offset;       //!< Offset inside the block
 	xfs_sb_t*   sb;           //!< pointer to the superblock for this allocation group
 } xfs_in_t;
 
@@ -131,6 +131,16 @@ xattr_t* unpack_xattr_data( uint8_t const* data, size_t data_len, bool log_error
   * @param[out] in pointer to the struct pointer of the inode structure to destroy. Sets *in to NULL.
 **/
 void xfs_free_in( xfs_in_t** in );
+
+
+/** @brief Create an empty xfs_in_t structure
+  *
+  * @param[in] ag_num  The allocation group number this inode belongs to
+  * @param[in] block   The absolute block number this inode resides in
+  * @param[in] offset  The offset of the inode inside its block
+  * @return A pointer to the allocated and initialized inode, or NULL on failure.
+**/
+xfs_in_t* xfs_create_in( uint32_t ag_num, uint64_t block, uint32_t offset );
 
 
 /** @brief read inode data from a data block

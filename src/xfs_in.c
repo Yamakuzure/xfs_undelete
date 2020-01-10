@@ -13,6 +13,7 @@
 
 
 #include <ctype.h>
+#include <errno.h>
 #include <string.h>
 
 
@@ -369,6 +370,23 @@ void xfs_free_in( xfs_in_t** in ) {
 	FREE_PTR( *in );
 }
 
+
+xfs_in_t* xfs_create_in( uint32_t ag_num, uint64_t block, uint32_t offset ) {
+	xfs_in_t* inode = ( xfs_in_t* )calloc( 1, sizeof( xfs_in_t ) );
+
+	if ( NULL == inode ) {
+		log_critical( "Unable to allocate %zu bytes for inode structure: %m %d",
+			      sizeof( xfs_in_t ), errno );
+		return NULL;
+	}
+
+	inode->ag_num = ag_num;
+	inode->block  = block;
+	inode->offset = offset;
+	inode->sb     = &superblocks[ag_num];
+
+	return inode;
+}
 
 int xfs_read_in( xfs_in_t* in, uint8_t const* data, int fd ) {
 	RETURN_INT_IF_NULL( in );
