@@ -7,6 +7,7 @@
 #include "common.h"
 #include "device.h"
 #include "globals.h"
+#include "inode_queue.h"
 #include "log.h"
 #include "scanner.h"
 #include "thrd_ctrl.h"
@@ -171,6 +172,7 @@ cleanup:
 		// Sledge Hammer on error.
 		end_threads();
 
+	in_clear();
 	free_devices();
 	FREE_PTR( device_path );
 	FREE_PTR( output_dir );

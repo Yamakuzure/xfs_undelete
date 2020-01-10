@@ -7,6 +7,7 @@
 #include "inode_queue.h"
 #include "log.h"
 #include "utils.h"
+#include "xfs_in.h"
 
 
 #include <stdlib.h>
@@ -44,6 +45,16 @@ static int create_in_elem( in_queue_t** elem, xfs_in_t* in ) {
 
 	log_critical( "Unable to allocate %zu bytes for in_queue_t element!", sizeof( struct _in_queue ) );
 	return -1;
+}
+
+
+void in_clear( void ) {
+	xfs_in_t* elem = NULL;
+
+	do {
+		elem = in_pop();
+		xfs_free_in( &elem );
+	} while ( elem );
 }
 
 
@@ -93,53 +104,4 @@ int in_push( xfs_in_t* in ) {
 
 	return 0;
 }
-
-
-xfs_in_t* in_shift( void ) {
-	in_queue_t* elem   = NULL;
-	xfs_in_t*     result = NULL;
-
-	mtx_lock( &queue_lock );
-	if ( in_tail ) {
-		elem    = in_tail;
-		in_tail = elem->prev;
-		if ( NULL == in_tail )
-			// Was last element
-			in_head = NULL;
-	}
-	mtx_unlock( &queue_lock );
-
-	if ( elem ) {
-		result = TAKE_PTR( elem->in );
-		RELEASE( elem );
-		FREE_PTR( elem );
-	}
-
-	return result;
-}
-
-
-int in_unshift( xfs_in_t* in ) {
-	RETURN_INT_IF_NULL( in );
-
-	in_queue_t* elem = NULL;
-
-	if ( -1 == create_in_elem( &elem, in ) )
-		return -1;
-
-	mtx_lock( &queue_lock );
-	if ( in_head ) {
-		in_head->prev = elem;
-		elem->next    = in_head;
-		in_head       = elem;
-	} else {
-		// First element
-		in_head = elem;
-		in_tail = elem;
-	}
-	mtx_unlock( &queue_lock );
-
-	return 0;
-}
-
 
