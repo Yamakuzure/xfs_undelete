@@ -7,7 +7,7 @@
 #include "device.h"
 #include "log.h"
 #include "utils.h"
-#include "xfs_sb.h"
+#include "superblock.h"
 
 
 #include <ctype.h>

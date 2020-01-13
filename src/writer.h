@@ -3,7 +3,7 @@
 #pragma once
 
 
-#include "xfs_sb.h"
+#include "superblock.h"
 
 
 #include <stdbool.h>

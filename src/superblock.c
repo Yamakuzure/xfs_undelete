@@ -7,8 +7,8 @@
 #include "device.h"
 #include "globals.h"
 #include "log.h"
+#include "superblock.h"
 #include "utils.h"
-#include "xfs_sb.h"
 
 
 #include <errno.h>

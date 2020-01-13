@@ -4,9 +4,9 @@
 
 
 #include "file_type.h"
+#include "superblock.h"
 #include "xfs_dir.h"
 #include "xfs_ex.h"
-#include "xfs_sb.h"
 
 
 #include <stdbool.h>

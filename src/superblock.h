@@ -1,5 +1,5 @@
-#ifndef PWX_XFS_UNDELETE_SRC_XFS_SB_H_INCLUDED
-#define PWX_XFS_UNDELETE_SRC_XFS_SB_H_INCLUDED 1
+#ifndef PWX_XFS_UNDELETE_SRC_SUPERBLOCK_H_INCLUDED
+#define PWX_XFS_UNDELETE_SRC_SUPERBLOCK_H_INCLUDED 1
 #pragma once
 
 
@@ -94,4 +94,4 @@ typedef struct _xfs_sb {
 int xfs_read_sb( xfs_sb_t* sb, int fd, uint32_t ag_num, uint32_t ag_size, uint32_t bs );
 
 
-#endif // PWX_XFS_UNDELETE_SRC_XFS_SB_H_INCLUDED
+#endif // PWX_XFS_UNDELETE_SRC_SUPERBLOCK_H_INCLUDED

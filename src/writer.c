@@ -6,6 +6,7 @@
 #include "common.h"
 #include "globals.h"
 #include "log.h"
+#include "superblock.h"
 #include "writer.h"
 
 

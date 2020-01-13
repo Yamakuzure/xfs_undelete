@@ -6,7 +6,7 @@
 #include "analyzer.h"
 #include "scanner.h"
 #include "writer.h"
-#include "xfs_sb.h"
+#include "superblock.h"
 
 
 #include <stdbool.h>

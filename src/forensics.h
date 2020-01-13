@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include "superblock.h"
 #include "xfs_in.h"
 
 

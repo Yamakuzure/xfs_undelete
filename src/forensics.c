@@ -8,6 +8,7 @@
 #include "forensics.h"
 #include "globals.h"
 #include "log.h"
+#include "superblock.h"
 #include "utils.h"
 #include "xfs_dir.h"
 #include "xfs_ex.h"
