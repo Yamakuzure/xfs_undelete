@@ -4,9 +4,9 @@
 
 
 #include "common.h"
+#include "extent.h"
 #include "log.h"
 #include "utils.h"
-#include "xfs_ex.h"
 
 
 int xfs_read_ex( xfs_ex_t* ex, uint8_t const* data ) {

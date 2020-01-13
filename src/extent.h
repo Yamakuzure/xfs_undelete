@@ -1,5 +1,5 @@
-#ifndef PWX_XFS_UNDELETE_SRC_XFS_EX_H_INCLUDED
-#define PWX_XFS_UNDELETE_SRC_XFS_EX_H_INCLUDED 1
+#ifndef PWX_XFS_UNDELETE_SRC_EXTENT_H_INCLUDED
+#define PWX_XFS_UNDELETE_SRC_EXTENT_H_INCLUDED 1
 #pragma once
 
 
@@ -21,4 +21,4 @@ typedef struct _xfs_ex {
 int xfs_read_ex( xfs_ex_t* ex, uint8_t const* data );
 
 
-#endif // PWX_XFS_UNDELETE_SRC_XFS_EX_H_INCLUDED
+#endif // PWX_XFS_UNDELETE_SRC_EXTENT_H_INCLUDED

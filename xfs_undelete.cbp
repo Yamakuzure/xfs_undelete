@@ -81,6 +81,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/device.h" />
+		<Unit filename="src/extent.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/extent.h" />
 		<Unit filename="src/file_type.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -128,10 +132,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/xfs_dir.h" />
-		<Unit filename="src/xfs_ex.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="src/xfs_ex.h" />
 		<Unit filename="src/xfs_in.c">
 			<Option compilerVar="CC" />
 		</Unit>

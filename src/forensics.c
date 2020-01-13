@@ -6,12 +6,12 @@
 #include "common.h"
 #include "device.h"
 #include "forensics.h"
+#include "extent.h"
 #include "globals.h"
 #include "log.h"
 #include "superblock.h"
 #include "utils.h"
 #include "xfs_dir.h"
-#include "xfs_ex.h"
 
 
 #include <ctype.h>
