@@ -6,9 +6,9 @@
 #include "common.h"
 #include "directory.h"
 #include "globals.h"
+#include "inode.h"
 #include "log.h"
 #include "utils.h"
-#include "xfs_in.h"
 
 
 #include <ctype.h>

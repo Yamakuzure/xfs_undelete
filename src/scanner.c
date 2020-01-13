@@ -7,11 +7,11 @@
 #include "file_type.h"
 #include "forensics.h"
 #include "globals.h"
+#include "inode.h"
 #include "inode_queue.h"
 #include "log.h"
 #include "scanner.h"
 #include "utils.h"
-#include "xfs_in.h"
 
 
 #include <errno.h>

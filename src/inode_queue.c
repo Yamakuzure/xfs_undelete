@@ -4,10 +4,10 @@
 
 
 #include "common.h"
+#include "inode.h"
 #include "inode_queue.h"
 #include "log.h"
 #include "utils.h"
-#include "xfs_in.h"
 
 
 #include <stdlib.h>

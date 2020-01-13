@@ -101,6 +101,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/globals.h" />
+		<Unit filename="src/inode.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/inode.h" />
 		<Unit filename="src/inode_queue.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -132,10 +136,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/writer.h" />
-		<Unit filename="src/xfs_in.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="src/xfs_in.h" />
 		<Extensions>
 			<editor_config active="1" use_tabs="1" tab_indents="1" tab_width="8" indent="8" eol_mode="2" />
 		</Extensions>

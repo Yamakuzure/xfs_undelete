@@ -3,8 +3,8 @@
 #pragma once
 
 
+#include "inode.h"
 #include "superblock.h"
-#include "xfs_in.h"
 
 
 #include <stddef.h>

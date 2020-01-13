@@ -1,5 +1,5 @@
-#ifndef PWX_XFS_UNDELETE_SRC_XFS_IN_H_INCLUDED
-#define PWX_XFS_UNDELETE_SRC_XFS_IN_H_INCLUDED 1
+#ifndef PWX_XFS_UNDELETE_SRC_INODE_H_INCLUDED
+#define PWX_XFS_UNDELETE_SRC_INODE_H_INCLUDED 1
 #pragma once
 
 
@@ -155,4 +155,4 @@ xfs_in_t* xfs_create_in( uint32_t ag_num, uint64_t block, uint32_t offset );
 int xfs_read_in( xfs_in_t* in, uint8_t const* data, int fd );
 
 
-#endif // PWX_XFS_UNDELETE_SRC_XFS_IN_H_INCLUDED
+#endif // PWX_XFS_UNDELETE_SRC_INODE_H_INCLUDED
