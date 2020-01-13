@@ -32,6 +32,7 @@ static int init_analyze_data( analyze_data_t* analyze_data, uint32_t thrd_num, c
 	analyze_data->found_files  = 0;
 	analyze_data->is_finished  = false;
 	analyze_data->is_running   = false;
+	analyze_data->is_shackled  = true;
 	analyze_data->sb_data      = sb_data;
 	analyze_data->thread_num   = thrd_num;
 

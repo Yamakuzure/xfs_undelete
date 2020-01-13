@@ -21,9 +21,10 @@ typedef struct _analyze_data {
 	_Atomic( uint64_t ) found_files;  //!< Increased by the thread, questioned by main
 	_Atomic( bool )     is_finished;  //!< Initialized with false, set to true when the thread is finished.
 	_Atomic( bool )     is_running;   //!< Set to true when woken up, and to false when stopping
-	xfs_sb_t*             sb_data;      //!< The Superblock data this thread shall use
+	_Atomic( bool )     is_shackled;  //!< Re-enqueue incomplete directory inodes, scanners aren't finished.
+	xfs_sb_t*           sb_data;      //!< The Superblock data this thread shall use
 	mtx_t               sleep_lock;   //!< Used for conditional sleeping until signaled
-	uint32_t            thread_num;   //!< Number of the thread for logging
+	int32_t             thread_num;   //!< Number of the thread for logging
 	cnd_t               wakeup_call;  //!< Used by the main thread to signal the thread to continue
 } analyze_data_t;
 
