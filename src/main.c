@@ -91,7 +91,13 @@ int main( int argc, char const* argv[] ) {
 	/// ==================================================================
 
 	// --- Pre) Prepare the thread data structures ---
+#if defined(PWX_DEBUG)
+	log_debug("%s", "Forcing single threaded operation in debug mode!");
+	src_is_ssd = false;
+	tgt_is_ssd = false;
+#endif // defined
 	uint32_t max_threads = src_is_ssd ? ( 2 * sb_ag_count ) + ( tgt_is_ssd ? sb_ag_count : 1 ) : 1;
+	uint32_t current_ag  = 0; // Needed for single threaded reading operation
 
 	SET_OR_FAIL( analyze_data = create_analyze_data( sb_ag_count, device_path ) );
 	SET_OR_FAIL( scan_data    = create_scanner_data( sb_ag_count, device_path ) );
@@ -111,7 +117,7 @@ int main( int argc, char const* argv[] ) {
 				}
 			}
 		} else
-			EXEC_OR_FAIL( start_scanner( &scan_data[ag_scanned] ) );
+			EXEC_OR_FAIL( start_scanner( &scan_data[current_ag] ) );
 
 		// ------------------------------------------------------------
 		// --- 2) Wake up all threads                               ---
@@ -123,15 +129,22 @@ int main( int argc, char const* argv[] ) {
 		// -----------------------------------------------------------------------------------
 		monitor_threads( max_threads );
 
-		// ----------------------------------------------
-		// --- 4) Join all threads that have finished ---
-		// ----------------------------------------------
-		join_scanners( true );
+		// ------------------------------------------------------
+		// --- 4) Join all scanner threads that have finished ---
+		// ------------------------------------------------------
+		join_scanners( true, &ag_scanned );
 
+		// If the scanners are fully done now, tell the analyzers that no new
+		// data is coming. Directory information still missing is lost.
+		if ( ag_scanned >= sb_ag_count )
+			unshackle_analyzers();
+
+		// --------------------------------------------------------
+		// --- 5) Join all remaining threads that have finished ---
+		// --------------------------------------------------------
 		if ( src_is_ssd ) {
 			join_analyzers( true );
 			join_writers( true );
-			ag_scanned = sb_ag_count;
 			continue; // done!
 		}
 
@@ -142,19 +155,19 @@ int main( int argc, char const* argv[] ) {
 		 */
 
 		// First analyze ...
-		EXEC_OR_FAIL( start_analyzer( &analyze_data[ag_scanned] ) );
+		EXEC_OR_FAIL( start_analyzer( &analyze_data[current_ag] ) );
 		wakeup_threads( true );
 		monitor_threads( max_threads );
 		join_analyzers( true );
 
 		// Then write...
-		EXEC_OR_FAIL( start_writer( &write_data[ag_scanned] ) );
+		EXEC_OR_FAIL( start_writer( &write_data[current_ag] ) );
 		wakeup_threads( true );
 		monitor_threads( max_threads );
 		join_writers( true );
 
-		// ... and done with this allocation group
-		++ag_scanned;
+		// ... and done with the current allocation group
+		++current_ag;
 	} // End of waiting for everything to be scanned
 
 	/// === Cleanup threads array ===
