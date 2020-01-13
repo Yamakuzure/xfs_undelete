@@ -68,8 +68,9 @@ void join_analyzers( bool finish_work );
 /** @brief join all running scanner threads
   *
   * @param[in] finish_work  If set to true, let the threads finish their work. Set to false to end them asap.
+  * @param[in] scan_count  Pointer to a counter to which the number of joined threads are added.
 **/
-void join_scanners( bool finish_work );
+void join_scanners( bool finish_work, uint32_t* scan_count );
 
 
 /** @brief join all running writer threads
@@ -121,6 +122,10 @@ int start_scanner( scan_data_t* data );
   * @return 0 on success, -1 on error.
 **/
 int start_writer( write_data_t* data );
+
+
+/// @brief notify all analyzer threads that the scanners are finished.
+void unshackle_analyzers( void );
 
 
 /** @brief convenience function to wake up all present threads at once

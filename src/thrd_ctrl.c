@@ -96,8 +96,8 @@ void end_threads( void ) {
 	wakeup_threads( false );
 
 	/// 2) Join all running threads
-	join_scanners(  false ); // Order ...
-	join_analyzers( false ); // ... matters
+	join_scanners(  false, NULL ); // Order ...
+	join_analyzers( false );       // ... matters
 	join_writers(   false );
 
 	/// 3) Destroy threads array
@@ -174,7 +174,8 @@ void join_analyzers( bool finish_work ) {
 		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
 			int t_res = 0;
 
-			if ( threads[ analyze_data[i].thread_num ] ) {
+			if ( (analyze_data[i].thread_num > -1)
+			  && threads[ analyze_data[i].thread_num ] ) {
 				analyze_data[i].do_stop  = !finish_work;
 				analyze_data[i].do_start =  finish_work;
 
@@ -186,20 +187,22 @@ void join_analyzers( bool finish_work ) {
 					log_warning( "Analyzer thread &lu reported a problem! %s [%d]",
 					             analyze_data[i].thread_num, get_thrd_err( t_res ), t_res );
 				threads[ analyze_data[i].thread_num ] = 0;
+				analyze_data[i].thread_num = -1;
 			}
 		}
 	}
 }
 
 
-void join_scanners( bool finish_work ) {
+void join_scanners( bool finish_work, uint32_t* scan_count ) {
 	if ( scan_data ) {
 		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
 			int t_res = 0;
 
-			if ( threads[ scan_data[i].thread_num ] ) {
-				analyze_data[i].do_stop  = !finish_work;
-				analyze_data[i].do_start =  finish_work;
+			if ( (scan_data[i].thread_num > -1)
+			  && threads[ scan_data[i].thread_num ] ) {
+				scan_data[i].do_stop  = !finish_work;
+				scan_data[i].do_start =  finish_work;
 
 				log_debug( "Joining scanner thread %lu/%lu [%lu]",
 				           i + 1, sb_ag_count, scan_data[i].thread_num );
@@ -209,6 +212,10 @@ void join_scanners( bool finish_work ) {
 					log_warning( "Scanner thread &lu reported a problem! %s [%d]",
 					             scan_data[i].thread_num, get_thrd_err( t_res ), t_res );
 				threads[ scan_data[i].thread_num ] = 0;
+				scan_data[i].thread_num = -1;
+
+				if ( scan_count )
+					(*scan_count)++;
 			}
 		}
 	}
@@ -221,7 +228,8 @@ void join_writers( bool finish_work ) {
 		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
 			int t_res = 0;
 
-			if ( threads[ write_data[i].thread_num ] ) {
+			if ( (write_data[i].thread_num > -1)
+			  && threads[ write_data[i].thread_num ] ) {
 				write_data[i].do_stop  = !finish_work;
 				write_data[i].do_start =  finish_work;
 
@@ -233,6 +241,7 @@ void join_writers( bool finish_work ) {
 					log_warning( "Writer thread &lu reported a problem! %s [%d]",
 					             write_data[i].thread_num, get_thrd_err( t_res ), t_res );
 				threads[ write_data[i].thread_num ] = 0;
+				write_data[i].thread_num = -1;
 			}
 		}
 	}
@@ -344,10 +353,19 @@ int start_writer( write_data_t* data ) {
 }
 
 
+void unshackle_analyzers( void ) {
+	if ( analyze_data ) {
+		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
+			analyze_data[i].is_shackled = false;
+		}
+	}
+}
+
+
 void wakeup_threads( bool do_work ) {
 	if ( analyze_data ) {
 		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
-			if ( analyze_data[i].thread_num ) {
+			if ( analyze_data[i].thread_num > -1 ) {
 				analyze_data[i].do_stop  = !do_work;
 				analyze_data[i].do_start =  do_work;
 				cnd_signal( &analyze_data[i].wakeup_call );
@@ -356,7 +374,7 @@ void wakeup_threads( bool do_work ) {
 	}
 	if ( scan_data ) {
 		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
-			if ( scan_data[i].thread_num ) {
+			if ( scan_data[i].thread_num > -1 ) {
 				scan_data[i].do_stop  = !do_work;
 				scan_data[i].do_start =  do_work;
 				cnd_signal( &scan_data[i].wakeup_call );
@@ -365,7 +383,7 @@ void wakeup_threads( bool do_work ) {
 	}
 	if ( write_data ) {
 		for ( uint32_t i = 0; i < sb_ag_count; ++i ) {
-			if ( write_data[i].thread_num ) {
+			if ( write_data[i].thread_num > -1 ) {
 				write_data[i].do_stop  = !do_work;
 				write_data[i].do_start =  do_work;
 				cnd_signal( &write_data[i].wakeup_call );
