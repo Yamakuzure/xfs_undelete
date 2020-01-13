@@ -4,7 +4,6 @@
 
 
 #include "analyzer.h"
-#include "common.h"
 #include "globals.h"
 #include "log.h"
 #include "scanner.h"

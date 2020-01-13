@@ -4,7 +4,6 @@
 
 
 #include "analyzer.h"
-#include "common.h"
 #include "globals.h"
 #include "inode_queue.h"
 #include "log.h"

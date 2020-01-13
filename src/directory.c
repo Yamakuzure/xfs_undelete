@@ -3,7 +3,6 @@
  ******************************************************************************/
 
 
-#include "common.h"
 #include "directory.h"
 #include "globals.h"
 #include "inode.h"

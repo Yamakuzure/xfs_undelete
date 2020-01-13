@@ -3,7 +3,6 @@
  ******************************************************************************/
 
 
-#include "common.h"
 #include "device.h"
 #include "directory.h"
 #include "forensics.h"

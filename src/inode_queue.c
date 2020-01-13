@@ -3,7 +3,6 @@
  ******************************************************************************/
 
 
-#include "common.h"
 #include "inode.h"
 #include "inode_queue.h"
 #include "log.h"

@@ -64,7 +64,8 @@ LDFLAGS  :=
 # -----------------------------------------------------------------------------
 GCC_STACKPROT := -fstack-protector-strong
 GCC_CSTD      := c11
-COMMON_FLAGS  := -Wall -Wextra -Wpedantic -Wno-format
+COMMON_HEADER := src/common.h
+COMMON_FLAGS  := -Wall -Wextra -Wpedantic -Wno-format -include $(COMMON_HEADER)
 
 # -----------------------------------------------------------------------------
 # Determine proper pedantic switch, and if and how stack protector works
@@ -164,7 +165,7 @@ all: $(TARGET)
 # ------------------------------------
 # Compile C modules
 # ------------------------------------
-$(MODULES): $(OBJDIR)/%.o: src/%.c Makefile
+$(MODULES): $(OBJDIR)/%.o: src/%.c Makefile src/common.h
 	@echo "[*] Compiling $@" ; \
 	$(MKDIR) $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
@@ -199,7 +200,7 @@ clean:
 # ------------------------------------
 # Create dependencies
 # ------------------------------------
-$(DEPDIR)/%.d: src/%.c
+$(DEPDIR)/%.d: src/%.c Makefile src/common.h
 	@set -e; $(RM) $@; \
 	$(MKDIR) $(dir $@); \
 	$(CC) -MM $(CPPFLAGS) $(DEFINES) $(CFLAGS) $< > $@.$$$$; \

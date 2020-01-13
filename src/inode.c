@@ -3,7 +3,6 @@
  ******************************************************************************/
 
 
-#include "common.h"
 #include "device.h"
 #include "forensics.h"
 #include "globals.h"

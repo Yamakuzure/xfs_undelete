@@ -76,6 +76,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/analyzer.h" />
+		<Unit filename="src/btree.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src/common.h" />
 		<Unit filename="src/device.c">
 			<Option compilerVar="CC" />
@@ -97,9 +100,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/forensics.h" />
-		<Unit filename="src/globals.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="src/globals.h" />
 		<Unit filename="src/inode.c">
 			<Option compilerVar="CC" />

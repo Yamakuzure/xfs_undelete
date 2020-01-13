@@ -3,7 +3,6 @@
  ******************************************************************************/
 
 
-#include "common.h"
 #include "device.h"
 #include "log.h"
 #include "utils.h"
