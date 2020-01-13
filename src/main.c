@@ -127,7 +127,7 @@ int main( int argc, char const* argv[] ) {
 		// -----------------------------------------------------------------------------------
 		// --- 3) Monitor the thread(s) and issue progress messages until all are finished ---
 		// -----------------------------------------------------------------------------------
-		monitor_threads( max_threads );
+		monitor_threads( max_threads, true );
 
 		// ------------------------------------------------------
 		// --- 4) Join all scanner threads that have finished ---
@@ -139,10 +139,15 @@ int main( int argc, char const* argv[] ) {
 		if ( ag_scanned >= sb_ag_count )
 			unshackle_analyzers();
 
-		// --------------------------------------------------------
-		// --- 5) Join all remaining threads that have finished ---
-		// --------------------------------------------------------
 		if ( src_is_ssd ) {
+			// ------------------------------------------
+			// --- 5) Monitor the remaining thread(s) ---
+			// ------------------------------------------
+			monitor_threads( max_threads, false );
+
+			// --------------------------------------------------------
+			// --- 6) Join all remaining threads that have finished ---
+			// --------------------------------------------------------
 			join_analyzers( true );
 			join_writers( true );
 			continue; // done!
@@ -157,13 +162,13 @@ int main( int argc, char const* argv[] ) {
 		// First analyze ...
 		EXEC_OR_FAIL( start_analyzer( &analyze_data[current_ag] ) );
 		wakeup_threads( true );
-		monitor_threads( max_threads );
+		monitor_threads( max_threads, false );
 		join_analyzers( true );
 
 		// Then write...
 		EXEC_OR_FAIL( start_writer( &write_data[current_ag] ) );
 		wakeup_threads( true );
-		monitor_threads( max_threads );
+		monitor_threads( max_threads, false );
 		join_writers( true );
 
 		// ... and done with the current allocation group

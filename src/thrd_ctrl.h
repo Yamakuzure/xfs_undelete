@@ -83,8 +83,9 @@ void join_writers( bool finish_work );
 /** @brief monitor all running threads, write progress twice per second, return when all are finished.
   *
   * @param[in] max_threads  Number of threads that have been started
+  * @param[in] end_with_scanners  Stop monitoring when there are no more scanner threads running
 **/
-void monitor_threads( uint32_t max_threads );
+void monitor_threads( uint32_t max_threads, bool end_with_scanners );
 
 
 /// @return return the total number of scanner threads running (aka working)

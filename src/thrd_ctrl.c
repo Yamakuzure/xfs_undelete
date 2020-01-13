@@ -63,8 +63,14 @@ static char const* get_thrd_err( int err ) {
 }
 
 
-static uint32_t threads_running( void ) {
-	return analyzers_running() + scanner_running() + writers_running();
+static uint32_t threads_running( bool* is_scanning ) {
+	uint32_t scanners = scanner_running();
+	uint32_t others   = analyzers_running() + writers_running();
+
+	if ( is_scanning )
+		*is_scanning = scanners > 0;
+
+	return scanners + others;
 }
 
 
@@ -248,18 +254,19 @@ void join_writers( bool finish_work ) {
 }
 
 
-void monitor_threads( uint32_t max_threads ) {
+void monitor_threads( uint32_t max_threads, bool end_with_scanners ) {
 	uint64_t analyzed          = 0;
 	uint64_t found_dirent      = 0;
 	uint64_t found_files       = 0;
 	uint64_t frwrd_dirent      = 0;
 	uint64_t frwrd_inodes      = 0;
-	uint32_t running           = threads_running();
+	bool     is_scanning       = true;
+	uint32_t running           = threads_running( &is_scanning );
 	uint64_t sec_scanned       = 0;
 	struct timespec sleep_time = { .tv_nsec = 500000000 };
 	uint64_t undeleted         = 0;
 
-	while ( running ) {
+	while ( running && ( is_scanning || !end_with_scanners ) ) {
 		get_analyzer_stats( &analyzed,    &found_dirent, &found_files  );
 		get_scanner_stats(  &sec_scanned, &frwrd_dirent, &frwrd_inodes );
 		get_writer_stats(   &undeleted );
@@ -273,7 +280,7 @@ void monitor_threads( uint32_t max_threads ) {
 		// Let's sleep for half a second
 		thrd_sleep( &sleep_time, NULL );
 
-		running = threads_running();
+		running = threads_running( &is_scanning );
 	}
 
 	// When all are finished, log the result out:
