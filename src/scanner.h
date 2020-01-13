@@ -23,7 +23,7 @@ typedef struct _scan_data {
 	xfs_sb_t*           sb_data;      //!< The Superblock data this thread shall handle
 	_Atomic( uint64_t ) sec_scanned;  //!< Increased by the thread, questioned by main
 	mtx_t               sleep_lock;   //!< Used for conditional sleeping until signaled
-	uint32_t            thread_num;   //!< Number of the thread for logging
+	int32_t             thread_num;   //!< Number of the thread for logging
 	cnd_t               wakeup_call;  //!< Used by the main thread to signal the thread to continue
 } scan_data_t;
 

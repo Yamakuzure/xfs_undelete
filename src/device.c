@@ -39,12 +39,12 @@ static char     sb_uuid_str[37] = { 0x0 }; /// String representation of the UUID
 static uint32_t sb_ag_size      = 0;       /// Bytes 84-87 : AG size (in blocks)
 
 // Global XFS core information we also need elsewhere
-uint64_t full_ag_bytes    = 0;    //!< sb_ag_size * sb_block_size
-uint64_t full_disk_blocks = 0;    //!< sb_ag_count * sb_ag_size
-uint64_t full_disk_size   = 0;    //!< full_disk_blocks * sb_block_size
-uint32_t sb_ag_count      = 0;    //!< Bytes 88-91 : Number of AGs (normally 0x04)
-uint32_t sb_block_size    = 0;    //!< Bytes  4- 7 : Block Size (in bytes)
-xfs_sb_t*  superblocks      = NULL; //!< All AGs are loaded in here
+uint64_t  full_ag_bytes    = 0;    //!< sb_ag_size * sb_block_size
+uint64_t  full_disk_blocks = 0;    //!< sb_ag_count * sb_ag_size
+uint64_t  full_disk_size   = 0;    //!< full_disk_blocks * sb_block_size
+uint32_t  sb_ag_count      = 0;    //!< Bytes 88-91 : Number of AGs (normally 0x04)
+uint32_t  sb_block_size    = 0;    //!< Bytes  4- 7 : Block Size (in bytes)
+xfs_sb_t* superblocks      = NULL; //!< All AGs are loaded in here
 
 // Global disk information
 bool src_is_ssd = false;
