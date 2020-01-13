@@ -3,10 +3,10 @@
 #pragma once
 
 
+#include "directory.h"
 #include "extent.h"
 #include "file_type.h"
 #include "superblock.h"
-#include "xfs_dir.h"
 
 
 #include <stdbool.h>

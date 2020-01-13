@@ -1,6 +1,9 @@
-#ifndef PWX_XFS_UNDELETE_SRC_XFS_DIR_H_INCLUDED
-#define PWX_XFS_UNDELETE_SRC_XFS_DIR_H_INCLUDED 1
+#ifndef PWX_XFS_UNDELETE_SRC_DIRECTORY_H_INCLUDED
+#define PWX_XFS_UNDELETE_SRC_DIRECTORY_H_INCLUDED 1
 #pragma once
+
+
+#include "file_type.h"
 
 
 #include <stdbool.h>
@@ -85,4 +88,4 @@ void xfs_free_dir_recursive( xfs_dir_t* dir );
 int xfs_read_packed_dir( xfs_dir_t* dir, uint8_t const* data, bool log_error );
 
 
-#endif // PWX_XFS_UNDELETE_SRC_XFS_DIR_H_INCLUDED
+#endif // PWX_XFS_UNDELETE_SRC_DIRECTORY_H_INCLUDED

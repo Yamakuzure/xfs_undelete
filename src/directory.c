@@ -4,11 +4,11 @@
 
 
 #include "common.h"
+#include "directory.h"
 #include "globals.h"
 #include "log.h"
 #include "utils.h"
 #include "xfs_in.h"
-#include "xfs_dir.h"
 
 
 #include <ctype.h>
