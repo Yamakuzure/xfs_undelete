@@ -3,6 +3,10 @@
 #pragma once
 
 
+#include <stddef.h>
+#include <stdint.h>
+
+
 /// @brief each extent information is 16 bytes packed, not-aligned.
 typedef struct _xfs_ex {
 	uint8_t  is_prealloc; //!< Bit    1       : ( 1) Flag – Set if extent is preallocated but not yet written, zero otherwise

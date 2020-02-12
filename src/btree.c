@@ -4,8 +4,13 @@
 
 
 #include "btree.h"
+#include "file_type.h"
+#include "globals.h"
 #include "log.h"
 #include "utils.h"
+
+
+#include <string.h>
 
 
 int is_btree_block( uint8_t const* data ) {

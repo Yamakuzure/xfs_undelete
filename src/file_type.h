@@ -3,6 +3,10 @@
 #pragma once
 
 
+#include <stddef.h>
+#include <stdint.h>
+
+
 /// @brief enum showing the type of an inode
 typedef enum _file_type {
 	FT_FIFO    = 0x01, //!< FIFO
