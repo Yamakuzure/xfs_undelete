@@ -31,11 +31,12 @@ extern scan_data_t*    scan_data;
 extern write_data_t*   write_data;
 
 // Magic Codes of the different XFS blocks
-uint8_t XFS_DB_MAGIC[4]; //!< Single block long directory block
-uint8_t XFS_DD_MAGIC[4]; //!< Multi block long directory block
-uint8_t XFS_DT_MAGIC[2]; //!< Multi block long directory tail (hash) block
-uint8_t XFS_IN_MAGIC[2]; //!< Inode magic
-uint8_t XFS_SB_MAGIC[4]; //!< Superblock magic
+extern uint8_t XFS_BT_MAGIC[4]; //!< B+Tree Node/Leaf magic
+extern uint8_t XFS_DB_MAGIC[4]; //!< Single block long directory block
+extern uint8_t XFS_DD_MAGIC[4]; //!< Multi block long directory block
+extern uint8_t XFS_DT_MAGIC[2]; //!< Multi block long directory tail (hash) block
+extern uint8_t XFS_IN_MAGIC[2]; //!< Inode magic
+extern uint8_t XFS_SB_MAGIC[4]; //!< Superblock magic
 
 
 // Sizes of the inode cores, aka "where the data starts"

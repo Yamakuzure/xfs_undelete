@@ -85,6 +85,7 @@ static bool is_directory_strip( uint8_t const* strip, size_t* dir_size ) {
 		if ( dir_size )
 			*dir_size = test_dir.dir_size;
 		xfs_free_dir( &test_dir );
+		return true;
 	}
 
 	return false;

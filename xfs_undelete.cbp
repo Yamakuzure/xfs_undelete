@@ -79,6 +79,7 @@
 		<Unit filename="src/btree.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src/btree.h" />
 		<Unit filename="src/common.h" />
 		<Unit filename="src/device.c">
 			<Option compilerVar="CC" />

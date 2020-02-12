@@ -50,6 +50,7 @@ bool src_is_ssd = false;
 bool tgt_is_ssd = false;
 
 // Magic Codes of the different XFS blocks
+uint8_t XFS_BT_MAGIC[4] = { 0x42, 0x4d, 0x41, 0x50 }; // "BMAP" ; B+Tree node or leaf block
 uint8_t XFS_DB_MAGIC[4] = { 0x58, 0x44, 0x42, 0x33 }; // "XDB3" ; Single block long directory block
 uint8_t XFS_DD_MAGIC[4] = { 0x58, 0x44, 0x44, 0x33 }; // "XDD3" ; Multi block long directory block
 uint8_t XFS_DT_MAGIC[2] = { 0x3d, 0xf1};              //          Multi block long directory tail (hash) block
